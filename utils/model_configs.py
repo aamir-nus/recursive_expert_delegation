@@ -12,6 +12,7 @@ class ModelFamily(Enum):
     GEMINI = "gemini"
     PERPLEXITY = "perplexity"
     OLLAMA = "ollama"
+    OPENROUTER = "openrouter"
 
 @dataclass
 class ModelConfig:
@@ -165,6 +166,29 @@ class ModelConfigFactory:
             model_name=model_name,
             message_formatter=format_ollama_messages
         )
+    
+    @staticmethod
+    def get_openrouter_config(model_name: str) -> ModelConfig:
+        def format_openrouter_messages(messages: List[Dict[str, str]]) -> Dict[str, Any]:
+            # OpenRouter uses OpenAI-compatible format
+            return {
+                "model": model_name,
+                "messages": messages
+            }
+        
+        return ModelConfig(
+            base_url="https://openrouter.ai/api/v1/chat/completions",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            headers={
+                "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", ""),  # Optional site URL
+                "X-Title": os.getenv("OPENROUTER_SITE_NAME", "")  # Optional site name
+            },
+            json_params={},
+            model_name=model_name,
+            message_formatter=format_openrouter_messages
+        )
 
 def get_model_configs(model_name: str) -> ModelConfig:
     """
@@ -192,9 +216,15 @@ def get_model_configs(model_name: str) -> ModelConfig:
         "sonar-small": (ModelFamily.PERPLEXITY, "sonar-small"),
 
         #ollama models
-        "deepseek-r1": (ModelFamily.OLLAMA, "deepseek-r1:8b"),
+        "qwen3-8b": (ModelFamily.OLLAMA, "qwen3:8b"),
         "phi4-mini": (ModelFamily.OLLAMA, "phi4-mini:latest"),
-        "qwen3": (ModelFamily.OLLAMA, "qwen3:8b"),
+        "deepseek-r1-8b": (ModelFamily.OLLAMA, "deepseek-r1:8b"),
+        
+        # OpenRouter models
+        "glm-4.5-air": (ModelFamily.OPENROUTER, "z-ai/glm-4.5-air:free"),
+        "deepseek-r1-0528": (ModelFamily.OPENROUTER, "deepseek/deepseek-r1-0528:free"),
+        "qwen3-30b-a3b": (ModelFamily.OPENROUTER, "qwen/qwen3-30b-a3b:free"),
+        # "qwen3-30b-a3b-instruct": (ModelFamily.OPENROUTER, "qwen/qwen3-30b-a3b-instruct-2507:free"),
     }
     
     if model_name not in model_mapping:
@@ -210,6 +240,8 @@ def get_model_configs(model_name: str) -> ModelConfig:
         config = ModelConfigFactory.get_perplexity_config(actual_model_name)
     elif family == ModelFamily.OLLAMA:
         config = ModelConfigFactory.get_ollama_config(actual_model_name)
+    elif family == ModelFamily.OPENROUTER:
+        config = ModelConfigFactory.get_openrouter_config(actual_model_name)
     else:
         raise ValueError(f"Unsupported model family: {family}")
     
