@@ -1,5 +1,6 @@
 import aiohttp  
 import asyncio 
+import logging
 import nest_asyncio
 import time
 
@@ -7,6 +8,8 @@ from tqdm import tqdm
 
 from utils.model_configs import get_model_configs
 from config import get_config
+
+logger = logging.getLogger(__name__)
 
 # gemini_api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY", None)
 # anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", None)
@@ -56,34 +59,68 @@ class AsyncLLMPipeline:
                 else:
                     decoded_response = resp['choices'][0]['message']['content']
             except (TypeError, KeyError) as e:
-                print(f"Error decoding response: {e}")
-                print(f"Response: {resp}")
+                logger.error(f"Error decoding response: {e}")
+                logger.debug(f"Response: {resp}")
                 timeout_or_incorrect_resp += 1
                 decoded_response = 'indeterminate'
                 
             except Exception as e:
-                print(f"Unexpected error: {e}")
-                print(f"Response: {resp}")
+                logger.error(f"Unexpected error: {e}")
+                logger.debug(f"Response: {resp}")
                 decoded_response = 'indeterminate'
             finally:
                 decoded_responses.append(decoded_response)
 
-        print(f"{timeout_or_incorrect_resp} requests out of {len(tasks)} requests either timed out or returned non-parseable outputs ...")
+        logger.warning(f"{timeout_or_incorrect_resp} requests out of {len(tasks)} requests either timed out or returned non-parseable outputs")
             
         return decoded_responses
 
     def batch_generate(self,
                       user_prompts):
         
-        batched_prompts = [user_prompts[idx : idx+50]
-                           for idx in range(0, len(user_prompts), 50)]
+        # CONFIGURATION FALLBACK PATTERN EXPLANATION:
+        # This nested try-catch pattern handles multiple configuration contexts:
+        # 1. When used within the RED framework (preferred path)
+        # 2. When used standalone with basic config
+        # 3. When used without any configuration system
+        #
+        # This pattern is necessary because this utility is designed to be:
+        # - Reusable across different projects
+        # - Backwards compatible with existing usage
+        # - Gracefully degrading when configs are unavailable
+        #
+        # Alternative approaches considered:
+        # - Dependency injection (too heavy for utility function)
+        # - Single config source (breaks backward compatibility)
+        # - Required config parameter (breaks existing usage)
+        
+        # Get batch size and delay from config if available
+        try:
+            # Check if this is being used within the R.E.D. framework
+            try:
+                from src.red.config.config_loader import get_config as get_red_config
+                red_config = get_red_config()
+                pipeline_config = red_config.get('llm_validation', {}).get('pipeline', {})
+                batch_size = pipeline_config.get('batch_size', 50)
+                request_delay = pipeline_config.get('request_delay', 0.05)
+            except ImportError:
+                # Fallback to basic config
+                batch_size = 50
+                request_delay = 0.05
+        except ImportError:
+            # Fallback values if no config is available
+            batch_size = 50
+            request_delay = 0.05
+        
+        batched_prompts = [user_prompts[idx : idx+batch_size]
+                           for idx in range(0, len(user_prompts), batch_size)]
         
         outputs = []
         for batch in tqdm(batched_prompts):
             batch_output = asyncio.run(self.model_response(batch))
             outputs.extend(batch_output)
 
-            time.sleep(0.05) #sleep for a second after each batch is processed!
+            time.sleep(request_delay)  # Configurable sleep time between batches
 
         return outputs
 
@@ -106,7 +143,7 @@ class LLM(AsyncLLMPipeline):
         # Get model-specific configurations
         self.model_configs = get_model_configs(model)
 
-        print(f'Using model : {self.model}')
+        logger.info(f'Using model : {self.model}')
 
         super().__init__(model=self.model)
 
@@ -115,18 +152,25 @@ class LLM(AsyncLLMPipeline):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
 
-        print('Exit called ... cleaning up')
-        print('Cleanup complete!\n')
+        logger.debug('Exit called ... cleaning up')
+        logger.debug('Cleanup complete!')
 
         return True
 
     async def agenerate(self,
                       user_prompt,
-                      max_retries:int=2):
+                      max_retries:int=None):
+
+        # Set retry parameters - these are algorithm-specific defaults
+        # Note: Retry logic parameters are kept in code as they represent
+        # implementation details of the HTTP retry mechanism, not application config
+        if max_retries is None:
+            max_retries = 2  # Standard retry count for API calls
+        
+        backoff_factor = 2  # Exponential backoff multiplier
+        min_sleep_time = 3  # Base retry delay in seconds
 
         retries = 0
-        backoff_factor = 2
-        min_sleep_time = 3
 
         messages = []
 
@@ -162,14 +206,14 @@ class LLM(AsyncLLMPipeline):
                             raise Exception(f"API request failed with status {response.status}: {error_text}")
             
             except asyncio.TimeoutError as timeout_err:
-                print("\ntimeout err : ",timeout_err)
-                print('request sent : ',messages)
+                logger.error(f"Timeout error: {timeout_err}")
+                logger.debug(f"Request sent: {messages}")
                 return 'indeterminate'
                     
             except Exception as e:
-                print('Exception: {}'.format(e))
+                logger.warning(f'Exception: {e}')
                 sleep_time = min_sleep_time * (backoff_factor ** retries)
-                print(f"Rate limit hit. Retrying in {sleep_time} seconds.")
+                logger.info(f"Rate limit hit. Retrying in {sleep_time} seconds.")
                 await asyncio.sleep(sleep_time) 
                 retries += 1
         

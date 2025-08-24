@@ -55,9 +55,9 @@ graph LR
   
     C --> D["🎯 Greedy Selection<br/>Pick maximally<br/>dissimilar labels"]
   
-    D --> E["📦 Subset 1<br/>Classes: 8-12"]
-    D --> F["📦 Subset 2<br/>Classes: 8-12"]
-    D --> G["📦 Subset 3<br/>Classes: 8-12"]
+    D --> E["📦 Subset 1<br/>Classes: 1-8"]
+    D --> F["📦 Subset 2<br/>Classes: 9-16"]
+    D --> G["📦 Subset 3<br/>Classes: 17-24"]
     D --> H["📦 ... More Subsets"]
   
     I["⚡ Benefits"] --> J["Reduced Complexity<br/>N → n problems"]
@@ -183,6 +183,98 @@ uv sync --all-groups
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
+## Environment Setup
+
+### LLM API Configuration
+
+R.E.D. framework supports multiple LLM providers. You'll need API keys for the models you want to use.
+
+1. **Copy the example environment file:**
+
+```bash
+cp .example.env .env
+```
+
+2. **Choose your LLM provider(s) and get API keys:**
+
+#### 🤖 **Google AI Studio (Gemini Models)** - Recommended for beginners
+
+- **Get API Key**: Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **Models**: `gemini-2.0-flash`, `gemini-2.5-flash`, `gemini-2.5-pro-exp`
+- **Cost**: Free tier available
+- **Add to .env**: `GOOGLE_AI_STUDIO_API_KEY=AIzaSy-your-actual-key-here`
+
+#### 🌐 **OpenRouter (Multiple Models)** - Best value
+
+- **Get API Key**: Visit [OpenRouter](https://openrouter.ai/keys)
+- **Models**: `glm-4.5-air` (free), `deepseek-r1-0528` (free), `qwen3-30b-a3b` (free)
+- **Cost**: Many free models available
+- **Add to .env**: `OPENROUTER_API_KEY=sk-or-v1-your-actual-key-here`
+
+#### 🏠 **Ollama (Local Models)** - Privacy focused
+
+- **Installation**: Visit [Ollama.ai](https://ollama.ai/) and install locally
+- **Models**: `qwen3-8b`, `phi4-mini`, `deepseek-r1-8b`
+- **Cost**: Free (runs on your hardware)
+- **Setup**:
+  ```bash
+  # Install Ollama
+  curl -fsSL https://ollama.ai/install.sh | sh
+
+  # Pull a model (example)
+  ollama pull deepseek-r1:8b
+  ```
+
+#### 🧠 **Anthropic Claude** - Highest quality
+
+- **Get API Key**: Visit [Anthropic Console](https://console.anthropic.com/)
+- **Models**: `claude-3.5-sonnet`, `claude-3.7-sonnet`
+- **Cost**: Pay-per-use
+- **Add to .env**: `ANTHROPIC_API_KEY=sk-ant-api03-your-actual-key-here`
+
+#### 🔍 **Perplexity AI** - Web-enhanced
+
+- **Get API Key**: Visit [Perplexity Settings](https://www.perplexity.ai/settings/api)
+- **Models**: `sonar`, `sonar-small`
+- **Cost**: Pay-per-use
+- **Add to .env**: `PERPLEXITY_API_KEY=pplx-your-actual-key-here`
+
+3. **Test your configuration:**
+
+```bash
+# Quick test with your configured model
+python -c "
+from config import get_config
+config = get_config()
+print(f'Default model: {config.default_model}')
+"
+```
+
+### Model Recommendations by Use Case
+
+```mermaid
+graph TD
+    A["🎯 Choose Your LLM"] --> B{"💰 Budget?"}
+  
+    B -->|Free| C["🆓 Free Options"]
+    B -->|Paid| D["💳 Paid Options"]
+  
+    C --> E["🌐 OpenRouter<br/>glm-4.5-air (free)<br/>deepseek-r1-0528 (free)"]
+    C --> F["🤖 Google AI Studio<br/>gemini-2.0-flash<br/>(free tier)"]
+    C --> G["🏠 Ollama<br/>deepseek-r1:8b<br/>(local, private: works best with <=3 examples/class)"]
+  
+    D --> H["🧠 Claude 3.7 Sonnet<br/>(highest quality)"]
+    D --> I["🤖 Gemini 2.5 Pro<br/>(good balance)"]
+    D --> J["🔍 Perplexity Sonar<br/>(web-enhanced : best option for 'updated' learning)"]
+  
+    style E fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style F fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style G fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style H fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style I fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style J fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+```
+
 ## Quick Start
 
 ```mermaid
@@ -267,13 +359,13 @@ subsetting:
   
 # Classifier settings
 classifier:
-  type: "logistic_regression"
+  type: "random_forest"
   use_embeddings: true
   noise_oversample_factor: 2.0
 
 # LLM validation
 llm_validation:
-  model_name: "deepseek-r1-8b"
+  model_name: "glm-4.5-air"
   temperature: 0.0
   confidence_threshold: 0.5
 
@@ -294,22 +386,22 @@ graph TB
             B["🤖 classifier.py<br/>Noise-oversampled<br/>classification"]
             C["🧠 validator.py<br/>LLM-based validation"]
         end
-      
+    
         subgraph "🔄 Pipelines"
             D["🚀 initial_training.py<br/>Setup pipeline"]
             E["🔁 active_learning.py<br/>Main learning loop"]
         end
-      
+    
         subgraph "💾 Data Management"
             F["📁 data_manager.py<br/>I/O and semantic search"]
         end
-      
+    
         subgraph "🛠️ Utilities"
             G["💬 llm.py<br/>LLM client"]
             H["⚙️ model_config.py<br/>Model configuration"]
             I["🔍 embeddings.py<br/>Embedding provider"]
         end
-      
+    
         subgraph "📋 Configuration"
             J["📝 main_config.yaml<br/>Main settings"]
             K["💭 prompts.yaml<br/>LLM prompts"]
@@ -409,18 +501,44 @@ python src/scripts/run_active_learning.py \
 
 ## Supported Models
 
+> 💡 **Tip**: See the [Environment Setup](#environment-setup) section for detailed API key setup instructions.
+
 ### LLM Models
 
-- **Ollama**: Local models (deepseek-r1, qwen3, phi4-mini)
-- **OpenRouter**: Various open-source models
-- **Claude**: Anthropic's models
-- **Gemini**: Google's models
-- **OpenAI**: GPT models
+| Provider                      | Models                                                                              | Cost                | Setup Required                                     |
+| ----------------------------- | ----------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------- |
+| **🌐 OpenRouter**       | `glm-4.5-air` (free)`deepseek-r1-0528` (free)`qwen3-30b-a3b` (free) | Free & Paid tiers   | [Get API Key](https://openrouter.ai/keys)             |
+| **🤖 Google AI Studio** | `gemini-2.0-flash``gemini-2.5-flash``gemini-2.5-pro-exp`            | Free tier available | [Get API Key](https://aistudio.google.com/app/apikey) |
+| **🏠 Ollama**           | `deepseek-r1:8b``qwen3:8b``phi4-mini:latest`                        | Free (local)        | [Install Ollama](https://ollama.ai/)                  |
+| **🧠 Anthropic**        | `claude-3.5-sonnet``claude-3.7-sonnet`                                     | Pay-per-use         | [Get API Key](https://console.anthropic.com/)         |
+| **🔍 Perplexity**       | `sonar``sonar-small`                                                       | Pay-per-use         | [Get API Key](https://www.perplexity.ai/settings/api) |
 
 ### Embedding Models
 
-- **Sentence Transformers**: All supported models
+- **Sentence Transformers**: All [supported models](https://www.sbert.net/docs/pretrained_models.html)
 - **Default**: `all-MiniLM-L6-v2` (good balance of speed/quality)
+- **Recommended for accuracy**: `all-mpnet-base-v2`
+- **Recommended for speed**: `all-MiniLM-L6-v2`
+
+### Model Selection Guide
+
+```mermaid
+graph LR
+    A["🎯 Your Priority"] --> B["💰 Cost"]
+    A --> C["🔒 Privacy"]
+    A --> D["⚡ Speed"]
+    A --> E["🎯 Accuracy"]
+  
+    B --> F["OpenRouter<br/>Free models"]
+    C --> G["Ollama<br/>Local models"]
+    D --> H["Gemini Flash<br/>Fast responses"]
+    E --> I["Claude Sonnet<br/>Highest quality"]
+  
+    style F fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style G fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style H fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style I fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+```
 
 ## Performance
 
