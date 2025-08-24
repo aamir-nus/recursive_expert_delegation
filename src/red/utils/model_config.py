@@ -6,7 +6,7 @@ import os
 # Import existing model configurations
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
 from utils.model_configs import ModelFamily as ExistingModelFamily, get_model_configs
-from ..config.config_loader import get_prompt
+from ..config.config_loader import get_prompt, get_config
 
 # Re-export the existing ModelFamily for compatibility
 ModelFamily = ExistingModelFamily
@@ -287,7 +287,6 @@ Respond with ONLY one of these levels."""
         
         # Get max_examples from config if not provided
         if max_examples is None:
-            from ..config.config_loader import get_config
             config = get_config()
             max_examples = config.get('llm_validation', {}).get('similar_examples_count', 5)
         

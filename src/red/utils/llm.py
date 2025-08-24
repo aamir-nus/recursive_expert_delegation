@@ -21,8 +21,7 @@ if str(project_root) not in sys.path:
 
 from utils.llm_pipeline import LLM
 from utils.model_configs import get_model_configs
-from config import get_config
-from ..config.config_loader import get_config as get_red_config, get_prompt
+from ..config.config_loader import get_config, get_prompt
 
 @dataclass
 class LLMResponse:
@@ -55,14 +54,13 @@ class LLMClient:
             temperature: Sampling temperature (from config if None)
             max_timeout: Maximum timeout per request in seconds (from config if None)
         """
-        # Load configurations
-        self.base_config = get_config()
-        self.red_config = get_red_config()
+        # Load configuration
+        config = get_config()
         
         # Set parameters from config or provided values
-        self.model_name = model_name or self.red_config.get('llm_validation', {}).get('model_name') or self.base_config.default_model
-        self.temperature = temperature if temperature is not None else self.red_config.get('llm_validation', {}).get('temperature', self.base_config.default_temperature)
-        self.max_timeout = max_timeout or self.red_config.get('llm_validation', {}).get('max_timeout', self.base_config.default_timeout)
+        self.model_name = model_name or config.get('llm_validation', {}).get('model_name', config.default_model)
+        self.temperature = temperature if temperature is not None else config.get('llm_validation', {}).get('temperature', config.default_temperature)
+        self.max_timeout = max_timeout or config.get('llm_validation', {}).get('max_timeout', config.default_timeout)
         
         # Get model configurations
         self.model_configs = get_model_configs(self.model_name)

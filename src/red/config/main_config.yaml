@@ -19,6 +19,11 @@
 # The unified config.py serves as the single source of truth, loading these
 # values and making them available throughout the application.
 
+# Performance Settings
+performance:
+  # Performance mode: 'speed', 'balanced', or 'accuracy'
+  mode: "balanced"
+
 # Data Settings
 data:
   # Directory to store all data files
@@ -42,19 +47,32 @@ subsetting:
   # Maximum number of labels per subset
   subset_size: 8
   
-  # Whether to use UMAP for dimensionality reduction
+  # Whether to use UMAP for dimensionality reduction (CRITICAL: Required for performance with large embeddings)
   use_umap: true
   
-  # Number of UMAP components
-  umap_components: 50
+  # Number of UMAP components (auto-adjusted based on performance.mode)
+  umap_components: "auto"  # Options: "auto", or specific number
+  
+  # UMAP components for different performance modes
+  speed_components: 32
+  balanced_components: 50
+  accuracy_components: 64  # Optimized for Qwen 128-dim truncated embeddings
   
   # Random state for reproducibility
   random_state: 42
 
 # Embedding Settings
 embeddings:
-  # Default embedding model
-  model_name: "all-MiniLM-L6-v2"
+  # Auto-selected based on performance.mode, or override with specific model
+  model_name: "auto"  # Options: "auto", or specific model name
+  
+  # Model options for different performance modes
+  speed_model: "all-MiniLM-L6-v2"
+  balanced_model: "all-mpnet-base-v2"
+  accuracy_model: "Qwen/Qwen3-Embedding-0.6B"
+  
+  # Qwen-specific optimization settings
+  qwen_truncate_dim: 128  # Dimension reduction for Qwen models for efficiency
   
   # Whether to cache embeddings
   enable_cache: true
@@ -67,8 +85,13 @@ embeddings:
 
 # Classifier Settings
 classifier:
-  # Type of classifier ('logistic_regression' or 'random_forest')
-  type: "random_forest"
+  # Auto-selected based on performance.mode, or override with specific type
+  type: "auto"  # Options: "auto", "logistic_regression", "random_forest", "setfit"
+  
+  # Classifier options for different performance modes
+  speed_type: "logistic_regression"
+  balanced_type: "random_forest"
+  accuracy_type: "setfit"
   
   # Whether to use embeddings (true) or TF-IDF (false)
   use_embeddings: true

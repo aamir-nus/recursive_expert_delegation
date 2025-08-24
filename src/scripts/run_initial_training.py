@@ -5,11 +5,12 @@ This script sets up and runs the initial training pipeline for the R.E.D. framew
 including subset creation and initial classifier training.
 """
 
-import sys
 import argparse
-import os
-from pathlib import Path
 import json
+import os
+import sys
+import traceback
+from pathlib import Path
 
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -271,7 +272,6 @@ def main():
     except Exception as e:
         print(f"\nERROR: {e}")
         if args.verbose:
-            import traceback
             traceback.print_exc()
         return 1
 

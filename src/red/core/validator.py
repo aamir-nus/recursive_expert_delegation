@@ -7,11 +7,14 @@ using Large Language Models to validate classifier predictions.
 
 import logging
 import os
+import pickle
+import random
 from typing import List, Dict, Any
 
 from ..utils.llm import LLMClient
 from ..utils.model_config import ValidationPrompts
 from ..utils.embeddings import EmbeddingProvider
+from ..config.config_loader import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,6 @@ class LLMValidator:
             similar_examples_count: Number of similar examples to include in validation (from config if None)
         """
         # Load configuration
-        from ..config.config_loader import get_config
         config = get_config()
         llm_config = config.get('llm_validation', {})
         embeddings_config = config.get('embeddings', {})
@@ -209,7 +211,6 @@ Focus on content, themes, topics, or characteristics that define this class."""
         except Exception as e:
             print(f"Error finding similar examples: {e}")
             # Fallback: return random examples
-            import random
             return random.sample(label_texts, min(k, len(label_texts)))
     
     def _create_validation_prompt(self, 
@@ -424,7 +425,6 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
     
     def save_cache(self, filepath: str) -> None:
         """Save the validation cache to disk."""
-        import pickle
         
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
@@ -443,7 +443,6 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
     
     def load_cache(self, filepath: str) -> None:
         """Load validation cache from disk."""
-        import pickle
         
         try:
             with open(filepath, 'rb') as f:

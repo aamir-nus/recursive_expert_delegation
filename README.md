@@ -243,10 +243,14 @@ cp .example.env .env
 
 ```bash
 # Quick test with your configured model
-python -c "
+uv run python -c "
 from src.red.config.config_loader import get_config
 config = get_config()
-print(f'Default model: {config.default_model}')
+print(f'LLM model: {config.default_model}')
+print(f'Performance mode: {config.get(\"performance\", {}).get(\"mode\", \"balanced\")}')
+resolved = config.resolve_performance_config()
+print(f'Resolved embedding model: {resolved.get(\"embeddings\", {}).get(\"model_name\")}')
+print(f'Resolved classifier type: {resolved.get(\"classifier\", {}).get(\"type\")}')
 "
 ```
 
@@ -352,16 +356,25 @@ The framework uses YAML configuration files for all settings:
 ### Key Configuration Options
 
 ```yaml
+# Performance mode: auto-selects optimal models and settings
+performance:
+  mode: "balanced"  # Options: "speed", "balanced", "accuracy"
+
 # Subset creation
 subsetting:
   subset_size: 8
-  use_umap: true
+  use_umap: true  # Critical for performance with large embeddings
+  umap_components: "auto"  # Auto-adjusted based on performance.mode
   
 # Classifier settings
 classifier:
-  type: "setfit"  # Options: "logistic_regression", "random_forest", "setfit"
+  type: "auto"  # Auto-selected based on performance.mode
   use_embeddings: true
   noise_oversample_factor: 2.0
+
+# Embedding settings
+embeddings:
+  model_name: "auto"  # Auto-selected based on performance.mode
 
 # LLM validation
 llm_validation:
@@ -375,6 +388,25 @@ active_learning:
   samples_per_iteration: 50
   max_iterations: 10
 ```
+
+### Performance Modes
+
+R.E.D. automatically selects optimal models and settings based on your performance priority:
+
+| Mode | Embedding Model | Classifier | UMAP Components | Use Case |
+|------|----------------|------------|-----------------|----------|
+| **Speed** | all-MiniLM-L6-v2 | Logistic Regression | 32 | Fast prototyping, limited compute |
+| **Balanced** | all-mpnet-base-v2 | Random Forest | 50 | General production use |
+| **Accuracy** | Qwen/Qwen3-Embedding-0.6B | SetFit | 64 | Research, maximum performance |
+
+Configure performance mode in `main_config.yaml`:
+
+```yaml
+performance:
+  mode: "accuracy"  # Change to speed/balanced/accuracy
+```
+
+All related settings (embedding model, classifier type, UMAP components) are automatically adjusted.
 
 ### Classifier Options
 
@@ -569,10 +601,13 @@ python src/scripts/run_active_learning.py \
 
 ### Embedding Models
 
-- **Sentence Transformers**: All [supported models](https://www.sbert.net/docs/pretrained_models.html)
-- **Default**: `all-MiniLM-L6-v2` (good balance of speed/quality)
-- **Recommended for accuracy**: `Qwen/Qwen3-Embedding-0.6B`
-- **Recommended for speed**: `all-MiniLM-L6-v2`
+R.E.D. automatically selects embedding models based on performance mode:
+
+- **Speed Mode**: `all-MiniLM-L6-v2` (384 dimensions, fast inference)
+- **Balanced Mode**: `all-mpnet-base-v2` (768 dimensions, good accuracy/speed trade-off)
+- **Accuracy Mode**: `Qwen/Qwen3-Embedding-0.6B` (128 dimensions truncated, state-of-the-art quality)
+
+The Qwen model in accuracy mode uses flash attention optimization and document prompts for maximum performance. All models use [Sentence Transformers](https://www.sbert.net/docs/pretrained_models.html). UMAP dimensionality reduction is automatically enabled and adjusted based on embedding size to maintain computational efficiency.
 
 ### Model Selection Guide
 

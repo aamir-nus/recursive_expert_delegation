@@ -21,6 +21,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
+from setfit import SetFitModel, SetFitTrainer
+from datasets import Dataset
+
 from ..config.config_loader import get_config
 from ..utils.embeddings import EmbeddingProvider
 
@@ -118,8 +121,54 @@ class SubsetClassifier:
                 random_state=self.random_state,
                 n_jobs=-1  # Use all available cores for training
             )
+        elif self.classifier_type == "setfit":
+            # SetFit: High-performance few-shot classifier using sentence transformers
+            # Uses the same embedding model as configured for consistency
+            return SetFitModel.from_pretrained(
+                self.embedding_model_name,
+                use_differentiable_head=True,  # Better performance for small datasets
+                head_params={
+                    "hidden_dropout_prob": 0.1,  # Regularization for small datasets
+                    "hidden_size": 128  # Compact head for efficiency
+                }
+            )
         else:
             raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
+    
+    def _train_setfit_classifier(self, texts: List[str], labels: List[str], X_train: np.ndarray, y_train: np.ndarray):
+        """
+        Train a SetFit classifier using the special SetFit training procedure.
+        
+        Args:
+            texts: Training texts
+            labels: Training labels
+            X_train: Feature matrix (not used for SetFit)
+            y_train: Label indices (not used for SetFit)
+        """
+        # Create Dataset object for SetFit
+        train_dataset = Dataset.from_dict({
+            "text": texts,
+            "label": labels
+        })
+        
+        # Create trainer with SetFit-specific parameters
+        trainer = SetFitTrainer(
+            model=self.classifier,
+            train_dataset=train_dataset,
+            num_iterations=20,  # SetFit training iterations, good default for few-shot
+            num_epochs=1,  # Number of epochs per iteration
+            batch_size=16,  # Batch size for contrastive learning
+            seed=self.random_state,
+            column_mapping={"text": "text", "label": "label"}
+        )
+        
+        # Train the SetFit model
+        trainer.train()
+        
+        # Update the classifier reference
+        self.classifier = trainer.model
+        
+        logger.info("SetFit training completed")
     
     def _prepare_features(self, texts: List[str]) -> np.ndarray:
         """
@@ -272,10 +321,21 @@ class SubsetClassifier:
         # Create and train classifier
         logger.info("Training classifier...")
         self.classifier = self._create_classifier()
-        self.classifier.fit(X_train, y_train)
+        
+        if self.classifier_type == "setfit":
+            # SetFit requires special training procedure
+            self._train_setfit_classifier(subset_texts, subset_labels, X_train, y_train)
+        else:
+            # Standard sklearn classifiers
+            self.classifier.fit(X_train, y_train)
         
         # Calculate training statistics
-        train_score = self.classifier.score(X_train, y_train)
+        if self.classifier_type == "setfit":
+            # For SetFit, calculate accuracy manually
+            train_predictions = self.predict(subset_texts)
+            train_score = sum(1 for pred, true in zip(train_predictions, subset_labels) if pred == true) / len(subset_labels)
+        else:
+            train_score = self.classifier.score(X_train, y_train)
         stats = {
             'subset_id': self.subset_id,
             'subset_labels': self.subset_labels,
@@ -286,13 +346,21 @@ class SubsetClassifier:
         }
         
         if X_val is not None:
-            val_score = self.classifier.score(X_val, y_val)
-            stats['validation_accuracy'] = val_score
+            if self.classifier_type == "setfit":
+                # For SetFit validation, use text-based prediction
+                val_texts = [subset_texts[i] for i in range(len(subset_texts)) if i < len(subset_texts) // 5]  # Approximate validation split
+                val_labels = [subset_labels[i] for i in range(len(subset_labels)) if i < len(subset_labels) // 5]
+                val_predictions = self.predict(val_texts)
+                val_score = sum(1 for pred, true in zip(val_predictions, val_labels) if pred == true) / len(val_labels)
+                pred_labels = val_predictions
+            else:
+                val_score = self.classifier.score(X_val, y_val)
+                # Detailed validation metrics
+                y_pred = self.classifier.predict(X_val)
+                val_labels = [self.idx_to_label[idx] for idx in y_val]
+                pred_labels = [self.idx_to_label[idx] for idx in y_pred]
             
-            # Detailed validation metrics
-            y_pred = self.classifier.predict(X_val)
-            val_labels = [self.idx_to_label[idx] for idx in y_val]
-            pred_labels = [self.idx_to_label[idx] for idx in y_pred]
+            stats['validation_accuracy'] = val_score
             
             stats['classification_report'] = classification_report(
                 val_labels, pred_labels, output_dict=True
@@ -326,11 +394,15 @@ class SubsetClassifier:
         # Prepare features
         X = self._prepare_features(texts)
         
-        # Make predictions
-        y_pred = self.classifier.predict(X)
-        
-        # Convert indices back to labels
-        predicted_labels = [self.idx_to_label[idx] for idx in y_pred]
+        if self.classifier_type == "setfit":
+            # SetFit predicts directly on text
+            predicted_labels = self.classifier.predict(texts)
+        else:
+            # Make predictions
+            y_pred = self.classifier.predict(X)
+            
+            # Convert indices back to labels
+            predicted_labels = [self.idx_to_label[idx] for idx in y_pred]
         
         return predicted_labels
     
@@ -350,11 +422,26 @@ class SubsetClassifier:
         if not texts:
             return np.array([])
         
-        # Prepare features
-        X = self._prepare_features(texts)
-        
-        # Get probabilities
-        probabilities = self.classifier.predict_proba(X)
+        if self.classifier_type == "setfit":
+            # SetFit doesn't have predict_proba, we'll use prediction confidence as a proxy
+            predictions = self.classifier.predict(texts)
+            # Convert predictions to probabilities (simplified)
+            probabilities = np.zeros((len(texts), len(self.all_labels)))
+            for i, pred in enumerate(predictions):
+                if pred in self.label_to_idx:
+                    label_idx = self.label_to_idx[pred]
+                    probabilities[i, label_idx] = 0.9  # High confidence for prediction
+                    # Distribute remaining probability among other classes
+                    remaining_prob = 0.1 / (len(self.all_labels) - 1)
+                    for j in range(len(self.all_labels)):
+                        if j != label_idx:
+                            probabilities[i, j] = remaining_prob
+        else:
+            # Prepare features
+            X = self._prepare_features(texts)
+            
+            # Get probabilities
+            probabilities = self.classifier.predict_proba(X)
         
         return probabilities
     

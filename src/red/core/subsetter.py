@@ -6,13 +6,16 @@ a large set of class labels into smaller subsets where each subset contains
 labels that are maximally dissimilar to each other.
 """
 
-import numpy as np
-import pickle
 import os
+import pickle
 from typing import Dict, List, Tuple, Any, Optional
-from sklearn.metrics.pairwise import cosine_similarity
+
+import numpy as np
 import umap
 from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
+from ..config.config_loader import get_config
 
 class LabelSubsetter:
     """
@@ -38,7 +41,6 @@ class LabelSubsetter:
             random_state: Random state for reproducibility (from config if None)
         """
         # Load configuration
-        from ..config.config_loader import get_config
         config = get_config()
         embeddings_config = config.get('embeddings', {})
         subsetting_config = config.get('subsetting', {})

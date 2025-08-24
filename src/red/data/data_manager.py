@@ -5,16 +5,18 @@ This module handles all data I/O operations, semantic search, and data preparati
 for the R.E.D. framework including training data, validation data, and unlabeled data.
 """
 
-import os
-import pandas as pd
-import numpy as np
-import pickle
 import json
-from typing import List, Dict, Tuple, Any, Optional, Union
-from pathlib import Path
+import os
+import pickle
 import random
+from pathlib import Path
+from typing import List, Dict, Tuple, Any, Optional, Union
+
+import numpy as np
+import pandas as pd
 
 from ..utils.embeddings import EmbeddingProvider
+from ..config.config_loader import get_config
 
 class DataManager:
     """
@@ -41,7 +43,6 @@ class DataManager:
             cache_embeddings: Whether to cache embeddings (from config if None)
         """
         # Load configuration
-        from ..config.config_loader import get_config
         config = get_config()
         data_config = config.get('data', {})
         embeddings_config = config.get('embeddings', {})

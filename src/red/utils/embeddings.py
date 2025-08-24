@@ -10,6 +10,8 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from ..config.config_loader import get_config
+
 logger = logging.getLogger(__name__)
 
 class EmbeddingProvider:
@@ -34,7 +36,6 @@ class EmbeddingProvider:
             device: Device to run the model on ('cpu', 'cuda', etc.)
         """
         # Load configuration
-        from ..config.config_loader import get_config
         config = get_config()
         embeddings_config = config.get('embeddings', {})
         data_config = config.get('data', {})
@@ -47,8 +48,23 @@ class EmbeddingProvider:
         )
         self.enable_cache = enable_cache if enable_cache is not None else embeddings_config.get('enable_cache', True)
         
-        # Initialize the embedding model
-        self.model = SentenceTransformer(self.model_name, device=device)
+        # Initialize the embedding model with optimizations for Qwen
+        if "Qwen" in self.model_name:
+            # Optimize Qwen models with flash attention and left padding
+            try:
+                self.model = SentenceTransformer(
+                    self.model_name,
+                    model_kwargs={"attn_implementation": "flash_attention_2", "device_map": "auto"},
+                    tokenizer_kwargs={"padding_side": "left"},
+                    device=device
+                )
+                logger.info(f"Loaded Qwen model {self.model_name} with flash attention optimizations")
+            except Exception as e:
+                logger.warning(f"Failed to load Qwen model with optimizations, falling back to standard loading: {e}")
+                self.model = SentenceTransformer(self.model_name, device=device)
+        else:
+            self.model = SentenceTransformer(self.model_name, device=device)
+        
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
         
         # Cache for embeddings
@@ -109,8 +125,15 @@ class EmbeddingProvider:
         if self.enable_cache and cache_key in self.embedding_cache:
             return self.embedding_cache[cache_key]
         
-        # Generate embedding
-        embedding = self.model.encode([text])[0]
+        # Generate embedding with Qwen-specific optimizations
+        if "Qwen" in self.model_name:
+            # Use document prompt for Qwen models and enable truncation
+            config = get_config()
+            embeddings_config = config.get('embeddings', {})
+            truncate_dim = embeddings_config.get('qwen_truncate_dim', 128)
+            embedding = self.model.encode([text], prompt_name="document", truncate_dim=truncate_dim)[0]
+        else:
+            embedding = self.model.encode([text])[0]
         
         # Cache the embedding
         if self.enable_cache:
@@ -149,7 +172,15 @@ class EmbeddingProvider:
         new_embeddings = {}
         if texts_to_encode:
             logger.info(f"Generating embeddings for {len(texts_to_encode)} new texts...")
-            encoded = self.model.encode(texts_to_encode, show_progress_bar=show_progress)
+            # Generate embeddings with Qwen-specific optimizations
+            if "Qwen" in self.model_name:
+                # Use document prompt for Qwen models and enable truncation
+                config = get_config()
+                embeddings_config = config.get('embeddings', {})
+                truncate_dim = embeddings_config.get('qwen_truncate_dim', 128)
+                encoded = self.model.encode(texts_to_encode, prompt_name="document", truncate_dim=truncate_dim, show_progress_bar=show_progress)
+            else:
+                encoded = self.model.encode(texts_to_encode, show_progress_bar=show_progress)
             
             for i, (text, embedding) in enumerate(zip(texts_to_encode, encoded)):
                 idx = indices_to_encode[i]

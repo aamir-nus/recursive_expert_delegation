@@ -3,11 +3,153 @@ Configuration Loader for R.E.D. Framework
 
 This module provides utilities for loading and managing configuration files
 for the R.E.D. framework.
+
+CONFIGURATION PHILOSOPHY:
+This configuration system follows a clear separation of concerns:
+
+1. CONFIG FILE CONTAINS (broad application controls):
+   - Algorithm choices (classifier type, embedding models)
+   - Behavioral switches (use_embeddings, caching enabled)
+   - Infrastructure settings (batch sizes, file paths)
+   - Business logic thresholds (confidence thresholds, validation splits)
+
+2. CODE CONTAINS (implementation details):
+   - Algorithm-specific hyperparameters (sklearn max_iter, n_estimators)
+   - Internal confidence levels for response parsing
+   - Retry logic parameters (backoff factors, retry counts)
+   - Library defaults that rarely need user modification
+
+This separation ensures that:
+- Users can easily configure behavior without needing ML expertise
+- Developers can tune algorithms without exposing complexity
+- Config files remain clean and focused on user concerns
+- Implementation details stay with their respective algorithms
+
+NOTE: This is the single source of truth for all configuration values.
 """
 
 import yaml
+import dotenv
 from typing import Dict, Any, Optional
 from pathlib import Path
+from pydantic.v1 import BaseSettings
+
+# Load environment variables from project root
+project_root = Path(__file__).resolve().parents[3]
+dotenv.load_dotenv(project_root / ".env")
+
+class LLMConfig(BaseSettings):
+    """
+    Basic LLM configuration settings loaded from environment variables.
+    """
+    
+    # -- Default LLM Settings --
+    default_model: str = "glm-4.5-air"
+    default_temperature: float = 0.0
+    default_max_tokens: Optional[int] = 1024
+    
+    default_timeout: int = 120
+    default_max_retries: int = 2
+    
+    default_system_prompt: str = "you are a helpful assistant"
+
+
+class Config:
+    """
+    Unified configuration class that consolidates all settings.
+    
+    This class provides default values for basic LLM settings and loads
+    additional RED framework settings from YAML configuration files.
+    """
+    
+    def __init__(self, config_dir: Optional[str] = None):
+        # Load basic LLM configuration from environment
+        self._llm_config = LLMConfig()
+        
+        # Load RED framework configuration from YAML
+        self._config_loader = ConfigLoader(config_dir)
+        self._red_config = self._config_loader.load_main_config()
+    
+    # Expose LLM config attributes directly
+    @property
+    def default_model(self) -> str:
+        return self._llm_config.default_model
+    
+    @property
+    def default_temperature(self) -> float:
+        return self._llm_config.default_temperature
+    
+    @property
+    def default_max_tokens(self) -> Optional[int]:
+        return self._llm_config.default_max_tokens
+    
+    @property
+    def default_timeout(self) -> int:
+        return self._llm_config.default_timeout
+    
+    @property
+    def default_max_retries(self) -> int:
+        return self._llm_config.default_max_retries
+    
+    @property
+    def default_system_prompt(self) -> str:
+        return self._llm_config.default_system_prompt
+    
+    def get(self, key: str, default=None):
+        """Get a configuration value, checking RED config first, then base config."""
+        # Get resolved configuration (with auto values resolved)
+        resolved_config = self.resolve_performance_config()
+        
+        # First check if it's in the resolved RED configuration
+        if key in resolved_config:
+            return resolved_config[key]
+        
+        # Then check if it's a base config attribute
+        if hasattr(self, key):
+            return getattr(self, key)
+        
+        return default
+    
+    def get_red_config(self) -> Dict[str, Any]:
+        """Get the RED framework configuration."""
+        return self._red_config
+    
+    def get_prompt(self, prompt_name: str, category: str = None) -> Optional[str]:
+        """Get a prompt template from the prompts configuration."""
+        return self._config_loader.get_prompt(prompt_name, category)
+    
+    def resolve_performance_config(self) -> Dict[str, Any]:
+        """
+        Resolve auto configurations based on performance mode.
+        
+        Returns:
+            Resolved configuration with auto values replaced
+        """
+        config = self._red_config.copy()
+        performance_mode = config.get('performance', {}).get('mode', 'balanced')
+        
+        # Resolve embedding model
+        embeddings = config.get('embeddings', {})
+        if embeddings.get('model_name') == 'auto':
+            model_key = f"{performance_mode}_model"
+            resolved_model = embeddings.get(model_key, embeddings.get('balanced_model', 'all-mpnet-base-v2'))
+            config['embeddings']['model_name'] = resolved_model
+        
+        # Resolve classifier type
+        classifier = config.get('classifier', {})
+        if classifier.get('type') == 'auto':
+            type_key = f"{performance_mode}_type"
+            resolved_type = classifier.get(type_key, classifier.get('balanced_type', 'random_forest'))
+            config['classifier']['type'] = resolved_type
+        
+        # Resolve UMAP components
+        subsetting = config.get('subsetting', {})
+        if subsetting.get('umap_components') == 'auto':
+            components_key = f"{performance_mode}_components"
+            resolved_components = subsetting.get(components_key, subsetting.get('balanced_components', 50))
+            config['subsetting']['umap_components'] = resolved_components
+        
+        return config
 
 class ConfigLoader:
     """
@@ -266,7 +408,17 @@ def get_config_loader(config_dir: Optional[str] = None) -> ConfigLoader:
         _config_loader = ConfigLoader(config_dir)
     return _config_loader
 
-def get_config(key_path: str = None, default: Any = None) -> Any:
+# Global config instance
+_config_instance = None
+
+def get_config() -> Config:
+    """Get the unified configuration instance."""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = Config()
+    return _config_instance
+
+def get_config_value(key_path: str = None, default: Any = None) -> Any:
     """
     Get configuration value using the global config loader.
     
