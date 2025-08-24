@@ -7,7 +7,17 @@ import time
 from tqdm import tqdm
 
 from utils.model_configs import get_model_configs
-from config import get_config
+# Import config from the src directory
+import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# ANTI-PATTERN EXPLANATION: Import after sys.path manipulation
+# This import must come after the sys.path.insert() above to locate the src module
+# This is required for cross-directory module access in the utils/ folder
+from src.red.config.config_loader import get_config  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +108,7 @@ class AsyncLLMPipeline:
         try:
             # Check if this is being used within the R.E.D. framework
             try:
-                from src.red.config.config_loader import get_config as get_red_config
-                red_config = get_red_config()
+                red_config = get_config()
                 pipeline_config = red_config.get('llm_validation', {}).get('pipeline', {})
                 batch_size = pipeline_config.get('batch_size', 50)
                 request_delay = pipeline_config.get('request_delay', 0.05)
