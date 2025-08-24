@@ -1,4 +1,8 @@
-from typing import Dict, Any, List, Optional
+"""
+@TODO: Remove this file entirely and switch to using bifrost llm gateway
+"""
+
+from typing import Dict, Any, List
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -7,6 +11,7 @@ class ModelFamily(Enum):
     CLAUDE = "claude"
     GEMINI = "gemini"
     PERPLEXITY = "perplexity"
+    OLLAMA = "ollama"
 
 @dataclass
 class ModelConfig:
@@ -136,6 +141,30 @@ class ModelConfigFactory:
                 "temperature": 0.0
             }
         )
+    
+    @staticmethod
+    def get_ollama_config(model_name: str) -> ModelConfig:
+        def format_ollama_messages(messages: List[Dict[str, str]]) -> Dict[str, Any]:
+            # Ollama with OpenAI-compatible API expects standard OpenAI format
+            return {
+                "model": model_name,
+                "messages": messages,
+                "stream": False,
+                "temperature": 0.0,
+                "max_tokens": 1024
+            }
+        
+        return ModelConfig(
+            base_url="http://localhost:11434/v1/chat/completions",
+            # base_url="http://0.0.0.0:8088/v1/chat/completions", #bifrost llm gateway
+            api_key="ollama",  # Ollama doesn't require real API key but some clients expect it
+            headers={
+                "Content-Type": "application/json"
+            },
+            json_params={},
+            model_name=model_name,
+            message_formatter=format_ollama_messages
+        )
 
 def get_model_configs(model_name: str) -> ModelConfig:
     """
@@ -160,7 +189,12 @@ def get_model_configs(model_name: str) -> ModelConfig:
 
         # Perplexity models
         "sonar": (ModelFamily.PERPLEXITY, "sonar"),
-        "sonar-small": (ModelFamily.PERPLEXITY, "sonar-small")
+        "sonar-small": (ModelFamily.PERPLEXITY, "sonar-small"),
+
+        #ollama models
+        "deepseek-r1": (ModelFamily.OLLAMA, "deepseek-r1:8b"),
+        "phi4-mini": (ModelFamily.OLLAMA, "phi4-mini:latest"),
+        "qwen3": (ModelFamily.OLLAMA, "qwen3:8b"),
     }
     
     if model_name not in model_mapping:
@@ -174,6 +208,8 @@ def get_model_configs(model_name: str) -> ModelConfig:
         config = ModelConfigFactory.get_gemini_config(actual_model_name)
     elif family == ModelFamily.PERPLEXITY:
         config = ModelConfigFactory.get_perplexity_config(actual_model_name)
+    elif family == ModelFamily.OLLAMA:
+        config = ModelConfigFactory.get_ollama_config(actual_model_name)
     else:
         raise ValueError(f"Unsupported model family: {family}")
     

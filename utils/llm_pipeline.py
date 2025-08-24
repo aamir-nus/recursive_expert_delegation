@@ -1,12 +1,7 @@
 import aiohttp  
 import asyncio 
 import nest_asyncio
-import json
-import os
-import requests
 import time
-
-import tenacity
 
 from tqdm import tqdm
 
@@ -43,6 +38,17 @@ class AsyncLLMPipeline:
             try:
                 if self.model.startswith("gemini"):
                     decoded_response = resp["candidates"][0]["content"]["parts"][0]["text"]
+
+                elif self.model.startswith("claude"):
+                    decoded_response = resp["content"][0]["text"]
+
+                elif self.model.startswith("perplexity"):
+                    decoded_response = resp["text"]
+
+                elif self.model.startswith("deepseek-r1") or "ollama" in self.model:
+                    # Ollama with OpenAI-compatible API returns OpenAI format
+                    decoded_response = resp['choices'][0]['message']['content']
+
                 else:
                     decoded_response = resp['choices'][0]['message']['content']
             except (TypeError, KeyError) as e:
@@ -79,7 +85,7 @@ class AsyncLLMPipeline:
 
 nest_asyncio.apply()
 
-class AsyncLLMPipelineBuilder(AsyncLLMPipeline):
+class LLM(AsyncLLMPipeline):
 
     def __init__(self,
                  system_prompt:str,
