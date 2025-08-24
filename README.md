@@ -244,7 +244,7 @@ cp .example.env .env
 ```bash
 # Quick test with your configured model
 python -c "
-from config import get_config
+from src.red.config.config_loader import get_config
 config = get_config()
 print(f'Default model: {config.default_model}')
 "
@@ -359,7 +359,7 @@ subsetting:
   
 # Classifier settings
 classifier:
-  type: "random_forest"
+  type: "setfit"  # Options: "logistic_regression", "random_forest", "setfit"
   use_embeddings: true
   noise_oversample_factor: 2.0
 
@@ -376,6 +376,60 @@ active_learning:
   max_iterations: 10
 ```
 
+### Classifier Options
+
+R.E.D. supports three classifier types, each optimized for different scenarios:
+
+```mermaid
+graph LR
+    A["🎯 Choose Classifier"] --> B["📊 Logistic Regression<br/>Fast, interpretable<br/>Good baseline"]
+    A --> C["🌲 Random Forest<br/>Robust, handles noise<br/>Good general purpose"]
+    A --> D["🚀 SetFit<br/>Highest accuracy<br/>Best for few-shot"]
+  
+    B --> E["✅ Use when:<br/>• Speed is priority<br/>• Need interpretability<br/>• Simple text patterns"]
+  
+    C --> F["✅ Use when:<br/>• Noisy data<br/>• Mixed text types<br/>• Robust performance"]
+  
+    D --> G["✅ Use when:<br/>• Best accuracy needed<br/>• Have GPU/good CPU<br/>• Few examples per class"]
+  
+    style D fill:#e8f5e8,stroke:#388e3c,stroke-width:3px
+    style C fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+```
+
+#### 🚀 **SetFit (Recommended for highest accuracy)**
+
+SetFit combines the efficiency of sentence transformers with few-shot learning:
+
+- **Performance**: Highest accuracy, especially with limited training data
+- **Resource usage**: Most compute-intensive (GPU recommended)
+- **Best for**: 3-50 examples per class, when accuracy is critical
+- **Uses**: Same embedding model as configured (`all-MiniLM-L6-v2` by default)
+
+```yaml
+classifier:
+  type: "setfit"
+  use_embeddings: true  # Automatically uses embedding model
+```
+
+#### 🌲 **Random Forest (Balanced choice)**
+
+Robust ensemble method that handles noise well:
+
+- **Performance**: Good accuracy, robust to noise
+- **Resource usage**: Medium compute requirements
+- **Best for**: Mixed data quality, general-purpose use
+- **Uses**: Either embeddings or TF-IDF features
+
+#### 📊 **Logistic Regression (Fast baseline)**
+
+Simple linear classifier with good interpretability:
+
+- **Performance**: Fast training, decent accuracy
+- **Resource usage**: Minimal compute requirements
+- **Best for**: Quick experiments, simple text patterns
+- **Uses**: Either embeddings or TF-IDF features
+
 ## Architecture
 
 ```mermaid
@@ -386,22 +440,22 @@ graph TB
             B["🤖 classifier.py<br/>Noise-oversampled<br/>classification"]
             C["🧠 validator.py<br/>LLM-based validation"]
         end
-    
+  
         subgraph "🔄 Pipelines"
             D["🚀 initial_training.py<br/>Setup pipeline"]
             E["🔁 active_learning.py<br/>Main learning loop"]
         end
-    
+  
         subgraph "💾 Data Management"
             F["📁 data_manager.py<br/>I/O and semantic search"]
         end
-    
+  
         subgraph "🛠️ Utilities"
             G["💬 llm.py<br/>LLM client"]
             H["⚙️ model_config.py<br/>Model configuration"]
             I["🔍 embeddings.py<br/>Embedding provider"]
         end
-    
+  
         subgraph "📋 Configuration"
             J["📝 main_config.yaml<br/>Main settings"]
             K["💭 prompts.yaml<br/>LLM prompts"]
@@ -505,19 +559,19 @@ python src/scripts/run_active_learning.py \
 
 ### LLM Models
 
-| Provider                      | Models                                                                              | Cost                | Setup Required                                     |
-| ----------------------------- | ----------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------- |
-| **🌐 OpenRouter**       | `glm-4.5-air` (free)`deepseek-r1-0528` (free)`qwen3-30b-a3b` (free) | Free & Paid tiers   | [Get API Key](https://openrouter.ai/keys)             |
-| **🤖 Google AI Studio** | `gemini-2.0-flash``gemini-2.5-flash``gemini-2.5-pro-exp`            | Free tier available | [Get API Key](https://aistudio.google.com/app/apikey) |
-| **🏠 Ollama**           | `deepseek-r1:8b``qwen3:8b``phi4-mini:latest`                        | Free (local)        | [Install Ollama](https://ollama.ai/)                  |
-| **🧠 Anthropic**        | `claude-3.5-sonnet``claude-3.7-sonnet`                                     | Pay-per-use         | [Get API Key](https://console.anthropic.com/)         |
-| **🔍 Perplexity**       | `sonar``sonar-small`                                                       | Pay-per-use         | [Get API Key](https://www.perplexity.ai/settings/api) |
+| Provider                      | Models                                                                                | Cost                | Setup Required                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------- |
+| **🌐 OpenRouter**       | `glm-4.5-air` (free)<br />`deepseek-r1-0528` (free)<br />`qwen3-30b-a3b` (free) | Free & Paid tiers   | [Get API Key](https://openrouter.ai/keys)             |
+| **🤖 Google AI Studio** | `gemini-2.0-flash`<br />`gemini-2.5-flash`<br />`gemini-2.5-pro-exp`            | Free tier available | [Get API Key](https://aistudio.google.com/app/apikey) |
+| **🏠 Ollama**           | `deepseek-r1:8b`<br />`qwen3:8b`<br />`phi4-mini:latest`                        | Free (local)        | [Install Ollama](https://ollama.ai/)                  |
+| **🧠 Anthropic**        | `claude-3.5-sonnet`<br />`claude-3.7-sonnet`                                      | Pay-per-use         | [Get API Key](https://console.anthropic.com/)         |
+| **🔍 Perplexity**       | `sonar`<br />`sonar-small`                                                        | Pay-per-use         | [Get API Key](https://www.perplexity.ai/settings/api) |
 
 ### Embedding Models
 
 - **Sentence Transformers**: All [supported models](https://www.sbert.net/docs/pretrained_models.html)
 - **Default**: `all-MiniLM-L6-v2` (good balance of speed/quality)
-- **Recommended for accuracy**: `all-mpnet-base-v2`
+- **Recommended for accuracy**: `Qwen/Qwen3-Embedding-0.6B`
 - **Recommended for speed**: `all-MiniLM-L6-v2`
 
 ### Model Selection Guide
