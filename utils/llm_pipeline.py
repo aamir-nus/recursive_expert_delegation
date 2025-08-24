@@ -6,10 +6,14 @@ import time
 from tqdm import tqdm
 
 from utils.model_configs import get_model_configs
+from config import get_config
 
 # gemini_api_key = os.getenv("GOOGLE_AI_STUDIO_API_KEY", None)
 # anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", None)
 # perplexity_api_key = os.getenv("PERPLEXITY_API_KEY", None)
+
+# Get default config for project wide settings
+default_config = get_config()
 
 class AsyncLLMPipeline:
     def __init__(self, model:str=None):
@@ -88,10 +92,10 @@ nest_asyncio.apply()
 class LLM(AsyncLLMPipeline):
 
     def __init__(self,
-                 system_prompt:str,
+                 system_prompt:str=default_config.default_system_prompt,
                  few_shot_examples:list=[],
-                 model:str="gemini-2.0-flash",
-                 max_timeout_per_request:int=15):
+                 model:str=default_config.default_model,
+                 max_timeout_per_request:int=default_config.default_timeout,):
 
         self.system_prompt = system_prompt
         self.few_shot_examples = few_shot_examples
