@@ -44,7 +44,7 @@ class LLMConfig(BaseSettings):
     """
     
     # -- Default LLM Settings --
-    default_model: str = "glm-4.5-air"
+    default_model: str = "phi4-mini"
     default_temperature: float = 0.0
     default_max_tokens: Optional[int] = 1024
     

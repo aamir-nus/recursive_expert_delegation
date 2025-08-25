@@ -389,24 +389,32 @@ class ActiveLearningLoop:
         return predictions_sorted[:k]
     
     def _validate_samples(self, samples: List[Dict]) -> List[Dict]:
-        """Validate samples using LLM validator."""
-        print(f"Validating {len(samples)} samples using LLM...")
+        """Validate samples using LLM validator with efficient batch processing."""
+        print(f"Validating {len(samples)} samples using LLM batch processing...")
         
-        validated_samples = []
+        # Extract texts and predicted labels for batch processing
+        texts = [sample['text'] for sample in samples]
+        predicted_labels = [sample['predicted_label'] for sample in samples]
         
-        for sample in samples:
-            try:
-                validation_result = self.llm_validator.validate(
-                    text=sample['text'],
-                    predicted_label=sample['predicted_label'],
-                    use_cache=self.llm_config.get('use_cache', True)
-                )
-                
+        try:
+            # Use batch validation for efficiency
+            validation_results = self.llm_validator.validate_batch(
+                texts=texts,
+                predicted_labels=predicted_labels,
+                use_cache=self.llm_config.get('use_cache', True)
+            )
+            
+            # Attach validation results to samples
+            validated_samples = []
+            for sample, validation_result in zip(samples, validation_results):
                 sample['validation_result'] = validation_result
                 validated_samples.append(sample)
                 
-            except Exception as e:
-                print(f"⚠ Validation failed for sample: {e}")
+        except Exception as e:
+            print(f"⚠ Batch validation failed: {e}")
+            # Fallback to individual validation with error results
+            validated_samples = []
+            for sample in samples:
                 sample['validation_result'] = {
                     'is_valid': False,
                     'confidence': 0.0,

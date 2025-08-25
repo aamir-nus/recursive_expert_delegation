@@ -236,8 +236,9 @@ Focus on content, themes, topics, or characteristics that define this class."""
                 similar_examples, max_examples=self.similar_examples_count
             )
         
+        template = ValidationPrompts.get_binary_validation_prompt()
         prompt = ValidationPrompts.format_validation_prompt(
-            ValidationPrompts.BINARY_CLASSIFICATION_VALIDATION,
+            template,
             text=text,
             label=predicted_label,
             description=label_description,
@@ -356,14 +357,16 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
     def validate_batch(self, 
                       texts: List[str], 
                       predicted_labels: List[str],
-                      use_cache: bool = True) -> List[Dict[str, Any]]:
+                      use_cache: bool = True,
+                      include_reasoning: bool = False) -> List[Dict[str, Any]]:
         """
-        Validate multiple text samples in batch.
+        Validate multiple text samples in batch using efficient LLM batch processing.
         
         Args:
             texts: List of text samples to validate
             predicted_labels: List of predicted labels
             use_cache: Whether to use cached results
+            include_reasoning: Whether to request reasoning from the LLM
             
         Returns:
             List of validation results
@@ -371,12 +374,145 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
         if len(texts) != len(predicted_labels):
             raise ValueError("Number of texts and labels must match")
         
-        results = []
-        for text, predicted_label in zip(texts, predicted_labels):
-            result = self.validate(text, predicted_label, use_cache=use_cache)
-            results.append(result)
+        # Separate cached and non-cached samples
+        cached_results = {}
+        non_cached_indices = []
+        non_cached_texts = []
+        non_cached_labels = []
         
-        return results
+        for i, (text, predicted_label) in enumerate(zip(texts, predicted_labels)):
+            cache_key = f"{hash(text)}_{predicted_label}"
+            
+            if use_cache and cache_key in self.validation_cache:
+                cached_results[i] = self.validation_cache[cache_key]
+                self.validation_stats['cache_hits'] += 1
+            else:
+                non_cached_indices.append(i)
+                non_cached_texts.append(text)
+                non_cached_labels.append(predicted_label)
+        
+        # If all samples are cached, return early
+        if not non_cached_indices:
+            return [cached_results[i] for i in range(len(texts))]
+        
+        # Build all prompts for non-cached samples at once
+        user_prompts = []
+        prompt_metadata = []  # Store metadata for each prompt
+        
+        for text, predicted_label in zip(non_cached_texts, non_cached_labels):
+            # Get label description
+            label_description = self.label_descriptions.get(
+                predicted_label, 
+                f"Text samples that belong to the '{predicted_label}' category"
+            )
+            
+            # Find similar examples
+            similar_examples = self._find_similar_examples(text, predicted_label)
+            
+            # Create validation prompt
+            user_prompt = self._create_validation_prompt(
+                text, predicted_label, label_description, similar_examples
+            )
+            
+            user_prompts.append(user_prompt)
+            prompt_metadata.append({
+                'text': text,
+                'predicted_label': predicted_label,
+                'label_description': label_description,
+                'similar_examples': similar_examples,
+                'similar_examples_count': len(similar_examples)
+            })
+        
+        # Make batch LLM request for all non-cached samples
+        system_prompt = """You are a precise and accurate text classification validator.
+Your job is to determine if a text sample truly belongs to a specific class label.
+Be thorough in your analysis but respond with only 'True' or 'False'."""
+        
+        try:
+            batch_responses = self.llm_client.query_batch(system_prompt, user_prompts)
+            
+            # Process batch results
+            batch_results = []
+            for i, (response, metadata) in enumerate(zip(batch_responses, prompt_metadata)):
+                if not response.is_valid:
+                    self.validation_stats['llm_errors'] += 1
+                    result = {
+                        'is_valid': False,
+                        'confidence': 0.0,
+                        'error': 'LLM request failed',
+                        'similar_examples_count': metadata['similar_examples_count'],
+                        'label_description': metadata['label_description']
+                    }
+                else:
+                    # Parse the response
+                    response_text = response.content.strip().lower()
+                    
+                    if "true" in response_text and "false" not in response_text:
+                        is_valid = True
+                        confidence = 0.8
+                    elif "false" in response_text and "true" not in response_text:
+                        is_valid = False
+                        confidence = 0.8
+                    else:
+                        # Ambiguous response - default to False for safety
+                        is_valid = False
+                        confidence = 0.3
+                    
+                    result = {
+                        'is_valid': is_valid,
+                        'confidence': confidence,
+                        'llm_response': response.content,
+                        'similar_examples_count': metadata['similar_examples_count'],
+                        'label_description': metadata['label_description'],
+                        'similar_examples': metadata['similar_examples'] if include_reasoning else []
+                    }
+                    
+                    # Update statistics
+                    if is_valid:
+                        self.validation_stats['valid_predictions'] += 1
+                    else:
+                        self.validation_stats['invalid_predictions'] += 1
+                
+                batch_results.append(result)
+                
+                # Cache the result
+                if use_cache:
+                    cache_key = f"{hash(metadata['text'])}_{metadata['predicted_label']}"
+                    self.validation_cache[cache_key] = result
+                
+                # Update total validations
+                self.validation_stats['total_validations'] += 1
+                
+        except Exception as e:
+            # Handle batch processing errors
+            self.validation_stats['llm_errors'] += len(non_cached_indices)
+            batch_results = []
+            for metadata in prompt_metadata:
+                result = {
+                    'is_valid': False,
+                    'confidence': 0.0,
+                    'error': str(e),
+                    'similar_examples_count': metadata['similar_examples_count'],
+                    'label_description': metadata['label_description']
+                }
+                batch_results.append(result)
+                
+                # Update total validations
+                self.validation_stats['total_validations'] += 1
+        
+        # Combine cached and new results in the correct order
+        final_results = [None] * len(texts)
+        
+        # Place cached results
+        for i in cached_results:
+            final_results[i] = cached_results[i]
+        
+        # Place batch results
+        for i, batch_result in enumerate(batch_results):
+            original_index = non_cached_indices[i]
+            final_results[original_index] = batch_result
+        
+        return final_results
     
     def select_valid_samples(self, 
                            texts: List[str], 

@@ -111,7 +111,7 @@ classifier:
 # LLM Validation Settings
 llm_validation:
   # Default LLM model for validation
-  model_name: "glm-4.5-air"
+  model_name: "phi4-mini"
   
   # Sampling temperature
   temperature: 0.0
