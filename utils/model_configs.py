@@ -217,6 +217,7 @@ def get_model_configs(model_name: str) -> ModelConfig:
 
         #ollama models
         "qwen3-8b": (ModelFamily.OLLAMA, "qwen3:8b"),
+        "qwen3-4b": (ModelFamily.OLLAMA, "qwen3:4b"),
         "phi4-mini": (ModelFamily.OLLAMA, "phi4-mini:latest"),
         "deepseek-r1-8b": (ModelFamily.OLLAMA, "deepseek-r1:8b"),
         
