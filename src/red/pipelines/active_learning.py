@@ -259,7 +259,8 @@ class ActiveLearningLoop:
         unique_labels = list(set(self.data_manager.seed_data['labels']))
         self.llm_validator.generate_label_descriptions(
             label_names=unique_labels,
-            auto_generate=self.llm_config.get('auto_generate_descriptions', True)
+            auto_generate=self.llm_config.get('auto_generate_descriptions', True),
+            max_examples_per_label=50  # Use up to 50 examples per label for description generation
         )
         
         print("✓ LLM validator initialized")

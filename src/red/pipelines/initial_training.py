@@ -289,7 +289,8 @@ class InitialTrainingPipeline:
         
         label_descriptions = self.llm_validator.generate_label_descriptions(
             label_names=unique_labels,
-            auto_generate=auto_generate
+            auto_generate=auto_generate,
+            max_examples_per_label=50  # Use up to 50 examples per label for description generation
         )
         
         validator_stats = {

@@ -110,15 +110,15 @@ class AsyncLLMPipeline:
             try:
                 red_config = get_config()
                 pipeline_config = red_config.get('llm_validation', {}).get('pipeline', {})
-                batch_size = pipeline_config.get('batch_size', 50)
+                batch_size = pipeline_config.get('batch_size', 20)
                 request_delay = pipeline_config.get('request_delay', 0.05)
             except ImportError:
                 # Fallback to basic config
-                batch_size = 50
+                batch_size = 20
                 request_delay = 0.05
         except ImportError:
             # Fallback values if no config is available
-            batch_size = 50
+            batch_size = 20
             request_delay = 0.05
         
         batched_prompts = [user_prompts[idx : idx+batch_size]
@@ -213,6 +213,8 @@ class LLM(AsyncLLMPipeline):
                         else:
                             error_text = await response.text()
                             raise Exception(f"API request failed with status {response.status}: {error_text}")
+                        
+                    time.sleep(0.1) #artificial delay to avoid rate limiting
             
             except asyncio.TimeoutError as timeout_err:
                 logger.error(f"Timeout error: {timeout_err}")

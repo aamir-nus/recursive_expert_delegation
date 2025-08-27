@@ -115,59 +115,138 @@ class LLMValidator:
             label_descriptions: Dictionary mapping labels to their descriptions
         """
         self.label_descriptions = label_descriptions.copy()
-        print(f"Label descriptions set for {len(label_descriptions)} labels")
+        msg = f"Label descriptions set for {len(label_descriptions)} labels"
+        print(msg)
+        logger.info(msg)
     
-    def generate_label_descriptions(self, 
+    def generate_label_descriptions(self,
                                   label_names: List[str],
-                                  auto_generate: bool = True) -> Dict[str, str]:
+                                  auto_generate: bool = True,
+                                  max_examples_per_label: int = 50) -> Dict[str, str]:
         """
-        Generate descriptions for labels using the LLM.
-        
+        Generate descriptions for labels using the LLM based on actual training samples.
+        Uses batch processing for efficient LLM requests.
+
         Args:
             label_names: List of label names to generate descriptions for
             auto_generate: Whether to automatically generate descriptions
-            
+            max_examples_per_label: Maximum number of training samples to use per label
+
         Returns:
             Dictionary of label descriptions
         """
         descriptions = {}
-        
+
         if not auto_generate:
             # Use simple descriptions based on label names
             for label in label_names:
                 descriptions[label] = f"Text samples that belong to the '{label}' category"
             return descriptions
-        
-        # Generate descriptions using LLM
+
+        # Generate descriptions using LLM with actual training samples
         system_prompt = """You are an expert at understanding text classification categories.
-Given a class label name, provide a clear, concise description of what kind of text samples would belong to that category.
-Focus on the semantic meaning and characteristics that would help identify texts of this type.
-Keep descriptions to 1-2 sentences."""
-        
-        print("Generating label descriptions using LLM...")
+Given a class label name and examples of texts that belong to that category, provide a clear, concise description of what kind of text samples would belong to this category.
+Focus on the semantic meaning, content themes, topics, or characteristics that are common across the provided examples.
+Keep descriptions to 2-3 sentences. Base your description on the actual examples provided - do not make assumptions beyond what you see in the examples."""
+
+        print("Generating label descriptions using LLM with training examples...")
+        logger.info("Generating label descriptions using LLM with training examples...")
+
+        # Prepare batch processing
+        user_prompts = []
+        label_metadata = []  # Store metadata for each label
+
+        # Process special case first
+        if "__NOISE__" in label_names:
+            descriptions["__NOISE__"] = "Text samples that do not belong to any of the defined categories"
+
+        # Build all prompts at once
         for label in label_names:
             if label == "__NOISE__":
-                descriptions[label] = "Text samples that do not belong to any of the defined categories"
+                continue  # Already handled above
+
+            # Get training samples for this label
+            training_samples = self.training_data.get(label, [])
+
+            if not training_samples:
+                # No training samples available, use fallback
+                descriptions[label] = f"Text samples that belong to the '{label}' category"
+                msg = f"  {label}: Using fallback description (no training samples)"
+                print(msg)
+                logger.warning(msg)
                 continue
-            
+
+            # Sample up to max_examples_per_label from the training data
+            n_examples = min(max_examples_per_label, len(training_samples))
+            selected_examples = random.sample(training_samples, n_examples) if len(training_samples) > n_examples else training_samples
+
+            # Format examples for the prompt
+            examples_text = "\n".join([f"{i+1}. \"{example}\"" for i, example in enumerate(selected_examples[:10])])  # Show first 10 in prompt
+
+            if len(selected_examples) > 10:
+                examples_text += f"\n... and {len(selected_examples) - 10} more examples"
+
             user_prompt = f"""Class Label: "{label}"
 
-Provide a clear description of what kind of text samples would belong to this category.
-Focus on content, themes, topics, or characteristics that define this class."""
-            
-            try:
-                response = self.llm_client.query(system_prompt, user_prompt)
-                if response.is_valid and response.content:
-                    descriptions[label] = response.content.strip()
-                    print(f"  {label}: {descriptions[label]}")
-                else:
+Based on the following examples of texts that belong to this category, provide a clear description of what kind of text samples would belong to this category.
+
+Examples from this category:
+{examples_text}
+
+Focus on the common themes, topics, content patterns, and characteristics that you observe across these examples. Do not make assumptions beyond what you see in these examples."""
+
+            user_prompts.append(user_prompt)
+            label_metadata.append({
+                'label': label,
+                'n_examples': len(selected_examples),
+                'selected_examples': selected_examples
+            })
+
+        # If no prompts to process, return early
+        if not user_prompts:
+            self.label_descriptions = descriptions
+            return descriptions
+
+        # Make batch LLM request for all labels
+        msg = f"Making batch request for {len(user_prompts)} label descriptions..."
+        print(msg)
+        logger.info(msg)
+
+        try:
+            batch_responses = self.llm_client.query_batch(system_prompt, user_prompts)
+
+            # Process batch results
+            for i, (response, metadata) in enumerate(zip(batch_responses, label_metadata)):
+                label = metadata['label']
+                n_examples = metadata['n_examples']
+
+                if not response.is_valid:
                     # Fallback description
                     descriptions[label] = f"Text samples that belong to the '{label}' category"
-                    print(f"  {label}: Using fallback description")
-            except Exception as e:
-                print(f"Error generating description for {label}: {e}")
-                descriptions[label] = f"Text samples that belong to the '{label}' category"
-        
+                    msg = f"  {label}: Using fallback description (LLM failed)"
+                    print(msg)
+                    logger.warning(msg)
+                else:
+                    descriptions[label] = response.content.strip()
+                    msg = f"  {label}: Generated description using {n_examples} training examples"
+                    print(msg)
+                    logger.info(msg)
+                    logger.debug(f"    Description: {descriptions[label]}")
+
+        except Exception as e:
+            msg = f"Batch description generation failed: {e}"
+            print(msg)
+            logger.error(msg)
+
+            # Use fallback descriptions for all remaining labels
+            for metadata in label_metadata:
+                label = metadata['label']
+                if label not in descriptions:
+                    descriptions[label] = f"Text samples that belong to the '{label}' category"
+                    msg = f"  {label}: Using fallback description (batch failed)"
+                    print(msg)
+                    logger.warning(msg)
+
         self.label_descriptions = descriptions
         return descriptions
     
@@ -209,9 +288,12 @@ Focus on content, themes, topics, or characteristics that define this class."""
             return [result['text'] for result in similar_results]
         
         except Exception as e:
-            print(f"Error finding similar examples: {e}")
-            # Fallback: return random examples
-            return random.sample(label_texts, min(k, len(label_texts)))
+            msg = f"Error finding similar examples: {e}"
+            print(msg)
+            logger.error(msg)
+        
+        # Fallback: return random examples
+        return random.sample(label_texts, min(k, len(label_texts)))
     
     def _create_validation_prompt(self, 
                                  text: str, 
@@ -543,7 +625,9 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
                     'original_index': i
                 })
         
-        print(f"Selected {len(valid_samples)} valid samples out of {len(texts)} total")
+        msg = f"Selected {len(valid_samples)} valid samples out of {len(texts)} total"
+        print(msg)
+        logger.info(msg)
         return valid_samples
     
     def get_validation_statistics(self) -> Dict[str, Any]:
@@ -575,7 +659,9 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
         with open(filepath, 'wb') as f:
             pickle.dump(cache_data, f)
         
-        print(f"Validation cache saved to {filepath}")
+        msg = f"Validation cache saved to {filepath}"
+        print(msg)
+        logger.info(msg)
     
     def load_cache(self, filepath: str) -> None:
         """Load validation cache from disk."""
@@ -588,18 +674,28 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
             self.label_descriptions = cache_data.get('label_descriptions', {})
             self.validation_stats = cache_data.get('validation_stats', self.validation_stats)
             
-            print(f"Validation cache loaded from {filepath}")
-            print(f"Loaded {len(self.validation_cache)} cached validations")
+            msg1 = f"Validation cache loaded from {filepath}"
+            print(msg1)
+            logger.info(msg1)
+            msg2 = f"Loaded {len(self.validation_cache)} cached validations"
+            print(msg2)
+            logger.info(msg2)
             
         except FileNotFoundError:
-            print(f"Cache file not found: {filepath}")
+            msg = f"Cache file not found: {filepath}"
+            print(msg)
+            logger.warning(msg)
         except Exception as e:
-            print(f"Error loading cache: {e}")
+            msg = f"Error loading cache: {e}"
+            print(msg)
+            logger.error(msg)
     
     def clear_cache(self) -> None:
         """Clear the validation cache."""
         self.validation_cache = {}
-        print("Validation cache cleared")
+        msg = "Validation cache cleared"
+        print(msg)
+        logger.info(msg)
     
     def update_model(self, model_name: str) -> None:
         """
@@ -614,7 +710,9 @@ Be thorough in your analysis but respond with only 'True' or 'False'."""
             temperature=self.temperature,
             max_timeout=self.max_timeout
         )
-        print(f"Updated LLM model to: {model_name}")
+        msg = f"Updated LLM model to: {model_name}"
+        print(msg)
+        logger.info(msg)
     
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the current models and configuration."""

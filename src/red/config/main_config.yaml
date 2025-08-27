@@ -111,7 +111,7 @@ classifier:
 # LLM Validation Settings
 llm_validation:
   # Default LLM model for validation
-  model_name: "phi4-mini"
+  model_name: "claude-3.5-sonnet"
   
   # Sampling temperature
   temperature: 0.0
@@ -133,8 +133,8 @@ llm_validation:
   
   # LLM Pipeline settings
   pipeline:
-    batch_size: 50
-    request_delay: 0.05  # Sleep time between batches in seconds
+    batch_size: 20
+    request_delay: 1.0  # Sleep time between batches in seconds
 
 # Active Learning Settings
 active_learning:
@@ -142,7 +142,7 @@ active_learning:
   batch_size: 100
   
   # Number of informative samples to select per iteration
-  samples_per_iteration: 50
+  samples_per_iteration: 100
   
   # Maximum number of iterations
   max_iterations: 10
