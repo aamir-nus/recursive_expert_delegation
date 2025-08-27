@@ -1,0 +1,291 @@
+# R.E.D. Framework Prompt Templates
+# This file contains templates for LLM prompts used in the validation process
+
+# System Prompts
+system_prompts:
+  # Main validation system prompt
+  validation_expert: |
+    You are an expert text classifier performing validation tasks.
+    Your role is to carefully evaluate whether text samples truly belong to their predicted class labels.
+    
+    Guidelines:
+    - Be thorough but decisive in your analysis
+    - Consider semantic meaning, context, and intent
+    - Use provided examples and descriptions as reference points
+    - Be strict in your evaluation to maintain high quality
+    - Respond with only 'True' or 'False' unless specifically asked for reasoning.
+    - If the text is not related to the class, respond with 'False'.
+    - No other information is needed. Always respond with 'True' or 'False'.
+  
+  # Label description generation system prompt
+  description_generator: |
+    You are an expert at understanding and describing text classification categories.
+    Your task is to create clear, concise descriptions of what makes text samples belong to specific categories.
+    
+    Guidelines:
+    - Focus on semantic meaning and key characteristics
+    - Be specific enough to distinguish from other categories
+    - Keep descriptions to 1-2 sentences
+    - Use clear, professional language
+    - Consider both content themes and linguistic patterns
+  
+  # Uncertainty assessment system prompt
+  uncertainty_assessor: |
+    You are a classification uncertainty expert.
+    Your role is to assess how certain or uncertain a text classification should be.
+    
+    Guidelines:
+    - Consider ambiguity in the text content
+    - Evaluate potential overlap with other categories
+    - Assess confidence based on clarity of class indicators
+    - Use the provided confidence scale accurately
+
+# Validation Prompt Templates
+validation_prompts:
+  # Binary classification validation
+  binary_validation: |
+    Task: Determine if the following text sample truly belongs to the predicted class label.
+    
+    Class Information:
+    - Label: {label}
+    - Description: {description}
+    
+    {examples_section}
+    
+    Text to Validate: "{text}"
+    
+    Analysis Instructions:
+    1. Read the text carefully and understand its main content/theme
+    2. Compare it against the class description and characteristics
+    3. Consider how well it fits compared to the provided examples
+    4. Make a binary decision about classification correctness. The text is not related to the class if it is not related to the class description or examples.
+    5. If there is no clear evidence that the text is related to the class, respond with 'False'.
+    
+    Question: Does this text truly belong to the "{label}" class?
+    
+    Respond with ONLY "True" or "False".
+  
+  # Multi-class validation with alternatives
+  multiclass_validation: |
+    Task: Validate a multi-class text classification result.
+    
+    Available Classes:
+    {class_descriptions}
+    
+    Text Sample: "{text}"
+    Predicted Class: {predicted_class}
+    
+    {examples_section}
+    
+    Analysis Instructions:
+    1. Evaluate if the predicted class is the BEST fit among all available classes
+    2. Consider whether another class might be more appropriate
+    3. Focus on the most distinctive characteristics of each class
+    
+    Question: Is "{predicted_class}" the correct class for this text among the available options?
+    
+    Respond with ONLY "True" or "False".
+  
+  # Validation with reasoning (for debugging/analysis)
+  validation_with_reasoning: |
+    Task: Validate text classification and provide reasoning.
+    
+    Class Information:
+    - Label: {label}
+    - Description: {description}
+    
+    {examples_section}
+    
+    Text to Validate: "{text}"
+    
+    Please analyze this classification step by step:
+    
+    1. CONTENT ANALYSIS: What is the main content/theme of this text?
+    
+    2. CLASS ALIGNMENT: How well does this content align with the class description?
+    
+    3. EXAMPLE COMPARISON: How similar is this text to the provided examples?
+    
+    4. DECISION: Does this text belong to the "{label}" class?
+    
+    Format your response as:
+    Content: [your analysis]
+    Alignment: [your assessment]
+    Comparison: [your comparison]
+    Decision: True/False
+    Confidence: [High/Medium/Low]
+
+# Label Description Generation Templates
+description_prompts:
+  # Generate description from label name
+  from_label_name: |
+    Class Label: "{label}"
+    
+    Task: Create a clear, concise description of what kind of text samples would belong to this category.
+    
+    Guidelines:
+    - Focus on content themes, topics, or characteristics
+    - Be specific enough to distinguish from other categories
+    - Keep to 1-2 sentences
+    - Use professional, clear language
+    
+    Provide only the description, no additional commentary.
+  
+  # Generate description from examples
+  from_examples: |
+    Class Label: "{label}"
+    
+    Example texts from this category:
+    {examples}
+    
+    Task: Based on these examples, create a description of what defines this text category.
+    
+    Guidelines:
+    - Identify common themes, patterns, or characteristics
+    - Generalize beyond specific examples
+    - Create a description that would help classify new texts
+    - Keep to 1-2 sentences
+    
+    Provide only the description, no additional commentary.
+  
+  # Refine existing description
+  refine_description: |
+    Class Label: "{label}"
+    Current Description: "{current_description}"
+    
+    Additional Context:
+    {context}
+    
+    Task: Refine and improve the current description based on the additional context.
+    
+    Guidelines:
+    - Make the description more precise and distinctive
+    - Incorporate insights from the additional context
+    - Maintain clarity and conciseness
+    - Ensure it helps distinguish this class from others
+    
+    Provide only the refined description.
+
+# Uncertainty Assessment Templates
+uncertainty_prompts:
+  # Assess classification uncertainty
+  assess_uncertainty: |
+    Text Sample: "{text}"
+    Predicted Class: {predicted_class}
+    Classification Confidence: {confidence}
+    
+    Available Classes: {available_classes}
+    
+    Task: Assess the uncertainty level of this classification.
+    
+    Consider:
+    - Clarity of the text content
+    - Distinctiveness of class indicators
+    - Potential ambiguity or overlap with other classes
+    - Overall confidence in the classification
+    
+    Uncertainty Levels:
+    - CERTAIN: Text clearly belongs to the predicted class
+    - LIKELY: Text probably belongs to the predicted class
+    - UNCERTAIN: Classification is ambiguous or unclear
+    - UNLIKELY: Text probably doesn't belong to the predicted class
+    
+    Respond with ONLY one of: CERTAIN, LIKELY, UNCERTAIN, UNLIKELY
+  
+  # Detailed uncertainty analysis
+  detailed_uncertainty: |
+    Text Sample: "{text}"
+    Predicted Class: {predicted_class}
+    
+    Class Descriptions:
+    {class_descriptions}
+    
+    Task: Provide a detailed uncertainty analysis.
+    
+    Analyze:
+    1. CONTENT CLARITY: How clear and unambiguous is the text content?
+    2. CLASS INDICATORS: How strong are the indicators for the predicted class?
+    3. ALTERNATIVE CLASSES: Could this text reasonably belong to other classes?
+    4. OVERALL ASSESSMENT: What is your confidence in this classification?
+    
+    Format:
+    Clarity: [High/Medium/Low]
+    Indicators: [Strong/Moderate/Weak]
+    Alternatives: [None/Few/Many]
+    Assessment: [CERTAIN/LIKELY/UNCERTAIN/UNLIKELY]
+    Reasoning: [brief explanation]
+
+# Few-Shot Example Templates
+few_shot_examples:
+  # Standard validation examples
+  validation_examples:
+    - user: |
+        Class: "product_review"
+        Description: "Customer reviews and opinions about products or services"
+        Text: "This smartphone has amazing battery life and great camera quality!"
+        Does this text belong to the "product_review" class?
+      assistant: "True"
+    
+    - user: |
+        Class: "news_article" 
+        Description: "News reports and journalistic content about current events"
+        Text: "Scientists discover new species of deep-sea fish in Pacific Ocean"
+        Does this text belong to the "news_article" class?
+      assistant: "True"
+    
+    - user: |
+        Class: "technical_documentation"
+        Description: "Technical guides, manuals, and instructional content"
+        Text: "What's your favorite movie genre and why do you like it?"
+        Does this text belong to the "technical_documentation" class?
+      assistant: "False"
+
+# Template Helpers
+template_helpers:
+  # Format examples section
+  examples_section_template: |
+    Representative Examples:
+    {examples_list}
+  
+  # Format class descriptions
+  class_descriptions_template: |
+    {class_list}
+  
+  # Format example item
+  example_item_template: |
+    {index}. "{text}"
+  
+  # Format class item
+  class_item_template: |
+    - {label}: {description}
+
+# Prompt Configuration
+prompt_config:
+  # Maximum length for text samples in prompts
+  max_text_length: 500
+  
+  # Whether to truncate long texts
+  truncate_long_texts: true
+  
+  # Truncation suffix
+  truncation_suffix: "..."
+  
+  # Whether to include confidence scores in prompts
+  include_confidence: false
+
+# Default Values (moved from code)
+defaults:
+  # Default system prompt if none configured
+  fallback_system_prompt: "You are a precise and accurate text classification validator. Follow instructions exactly."
+  
+  # Default validation prompt if none configured
+  fallback_validation_prompt: |
+    Class: {label}
+    Description: {description}
+
+    {examples_section}
+
+    Text: "{text}"
+
+    Does this text belong to the "{label}" class?
+    Respond with ONLY "True" or "False".

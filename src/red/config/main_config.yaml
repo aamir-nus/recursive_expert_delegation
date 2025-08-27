@@ -1,0 +1,254 @@
+# R.E.D. Framework Main Configuration
+# This file contains the main settings for the Recursive Expert Delegation framework
+#
+# CONFIGURATION PHILOSOPHY:
+# This config file contains ONLY broad application-level controls that users
+# might reasonably want to change:
+# - Choice of algorithms (classifier type, embedding models)
+# - Behavioral switches (use_embeddings, auto_generate_descriptions)
+# - Infrastructure settings (batch_size, cache settings)
+# - Business logic thresholds (confidence_threshold, validation_split)
+#
+# What's NOT in this config (kept in code as implementation details):
+# - Algorithm-specific hyperparameters (sklearn defaults like max_iter, n_estimators)
+# - Internal confidence levels for response parsing
+# - Retry logic parameters (backoff factors, retry counts)
+# - Library-specific defaults that rarely need changing
+#
+# NOTE: This YAML configuration is loaded and integrated into the main config.py
+# The unified config.py serves as the single source of truth, loading these
+# values and making them available throughout the application.
+
+# Performance Settings
+performance:
+  # Performance mode: 'speed', 'balanced', or 'accuracy'
+  mode: "balanced"
+
+# Data Settings
+data:
+  # Directory to store all data files
+  data_dir: "./Datasets"
+  
+  # Directory to store model outputs and checkpoints
+  output_dir: "./Outputs"
+  
+  # Directory to store logs
+  log_dir: "./logs"
+  
+  # Default file encoding
+  encoding: "utf-8"
+  
+  # Default column names for CSV files
+  text_column: "text"
+  label_column: "label"
+
+# Subset Creation Settings
+subsetting:
+  # Maximum number of labels per subset
+  subset_size: 8
+  
+  # Whether to use UMAP for dimensionality reduction (CRITICAL: Required for performance with large embeddings)
+  use_umap: true
+  
+  # Number of UMAP components (auto-adjusted based on performance.mode)
+  umap_components: "auto"  # Options: "auto", or specific number
+  
+  # UMAP components for different performance modes
+  speed_components: 32
+  balanced_components: 50
+  accuracy_components: 64  # Optimized for Qwen 128-dim truncated embeddings
+  
+  # Random state for reproducibility
+  random_state: 42
+
+# Embedding Settings
+embeddings:
+  # Auto-selected based on performance.mode, or override with specific model
+  model_name: "auto"  # Options: "auto", or specific model name
+  
+  # Model options for different performance modes
+  speed_model: "all-MiniLM-L6-v2"
+  balanced_model: "all-mpnet-base-v2"
+  accuracy_model: "Qwen/Qwen3-Embedding-0.6B"
+  
+  # Qwen-specific optimization settings
+  qwen_truncate_dim: 128  # Dimension reduction for Qwen models for efficiency
+  
+  # Whether to cache embeddings
+  enable_cache: true
+  
+  # Directory for embedding cache (relative to data_dir)
+  cache_dir: "embeddings_cache"
+  
+  # Device to run embeddings on ('cpu', 'cuda', 'auto')
+  device: "auto"
+
+# Classifier Settings
+classifier:
+  # Auto-selected based on performance.mode, or override with specific type
+  type: "auto"  # Options: "auto", "logistic_regression", "random_forest", "setfit"
+  
+  # Classifier options for different performance modes
+  speed_type: "logistic_regression"
+  balanced_type: "random_forest"
+  accuracy_type: "setfit"
+  
+  # Whether to use embeddings (true) or TF-IDF (false)
+  use_embeddings: true
+  
+  # Noise oversampling factor
+  noise_oversample_factor: 2.0
+  
+  # Maximum features for TF-IDF (when not using embeddings)
+  max_features: 10000
+  
+  # Validation split for training
+  validation_split: 0.2
+  
+  # Random state for classifier training
+  random_state: 42
+
+# LLM Validation Settings
+llm_validation:
+  # Default LLM model for validation
+  model_name: "claude-3.5-sonnet"
+  
+  # Sampling temperature
+  temperature: 0.0
+  
+  # Maximum timeout per request (seconds)
+  max_timeout: 30
+  
+  # Number of similar examples to include in validation prompts
+  similar_examples_count: 6
+  
+  # Confidence threshold for accepting validations
+  confidence_threshold: 0.5
+  
+  # Whether to cache validation results
+  use_cache: true
+  
+  # Whether to automatically generate label descriptions
+  auto_generate_descriptions: true
+  
+  # LLM Pipeline settings
+  pipeline:
+    batch_size: 20
+    request_delay: 1.0  # Sleep time between batches in seconds
+
+# Active Learning Settings
+active_learning:
+  # Batch size for processing unlabeled data
+  batch_size: 100
+  
+  # Number of informative samples to select per iteration
+  samples_per_iteration: 100
+  
+  # Maximum number of iterations
+  max_iterations: 10
+  
+  # Minimum information gain to continue iterations
+  min_information_gain: 0.01
+  
+  # Threshold for retraining classifiers
+  retrain_threshold: 100
+  
+  # Whether to retrain all classifiers or only affected ones
+  retrain_all: false
+
+# Training Pipeline Settings
+training:
+  # Whether to balance classes during training
+  balance_classes: true
+  
+  # Whether to use SMOTE for oversampling
+  use_smote: true
+  
+  # Number of cross-validation folds (0 to disable)
+  cv_folds: 0
+  
+  # Whether to save intermediate results
+  save_intermediate: true
+  
+  # Frequency of saving checkpoints (iterations)
+  checkpoint_frequency: 5
+
+# Logging Settings
+logging:
+  # Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+  level: "INFO"
+  
+  # Whether to log to file
+  log_to_file: true
+  
+  # Whether to log to console
+  log_to_console: true
+  
+  # Log file name pattern
+  log_file_pattern: "recursive-expert-delegation_{timestamp}.log"
+  
+  # Whether to include detailed progress bars
+  progress_bars: true
+
+# Performance Settings
+performance:
+  # Number of parallel jobs (-1 for all cores)
+  n_jobs: -1
+  
+  # Whether to use multiprocessing for batch operations
+  use_multiprocessing: false
+  
+  # Batch size for parallel processing
+  parallel_batch_size: 50
+  
+  # Memory limit for large operations (GB)
+  memory_limit: 8
+
+# Evaluation Settings
+evaluation:
+  # Metrics to compute during evaluation
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+  
+  # Whether to save detailed evaluation reports
+  save_reports: true
+  
+  # Whether to generate confusion matrices
+  generate_confusion_matrix: true
+  
+  # Whether to save prediction examples
+  save_examples: true
+  
+  # Number of examples to save per class
+  examples_per_class: 10
+
+# Model Persistence Settings
+persistence:
+  # Whether to compress saved models
+  compress_models: true
+  
+  # Model file format ('joblib' or 'pickle')
+  model_format: "joblib"
+  
+  # Whether to save model metadata
+  save_metadata: true
+  
+  # Whether to version control models
+  version_models: true
+
+# Experimental Settings
+experimental:
+  # Whether to use experimental features
+  enable_experimental: false
+  
+  # Advanced uncertainty sampling methods
+  advanced_uncertainty: false
+  
+  # Whether to use ensemble methods
+  use_ensemble: false
+  
+  # Number of ensemble models
+  ensemble_size: 3
