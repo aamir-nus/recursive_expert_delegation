@@ -1,0 +1,4 @@
+Samples_Per_Class,Total_Time_s,AL_Iterations,Validated_Samples,Convergence,Accuracy,Precision,Recall,F1_Score
+30,110.0609200000763,5,22,False,0.0,0.0,0.0,0.0
+50,77.4438099861145,5,32,False,0.0,0.0,0.0,0.0
+100,84.12030172348022,5,41,False,0.0,0.0,0.0,0.0

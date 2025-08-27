@@ -1,0 +1,91 @@
+text,label
+This smartphone has excellent battery life and camera quality.,product_review
+The laptop is fast but the screen could be brighter.,product_review
+Great headphones with amazing sound quality for the price.,product_review
+The tablet is lightweight but lacks storage space.,product_review
+This camera takes stunning photos in low light conditions.,product_review
+Scientists develop new quantum computing breakthrough.,news_technology
+Major tech company announces AI research partnership.,news_technology
+New smartphone features revolutionary display technology.,news_technology
+Cybersecurity experts warn of emerging online threats.,news_technology
+Autonomous vehicles show promising safety test results.,news_technology
+How can I reset my password for online banking?,customer_service
+I need help with returning a damaged product.,customer_service
+What are your business hours and contact information?,customer_service
+Can you help me track my recent order shipment?,customer_service
+I want to cancel my subscription service.,customer_service
+Configure SSL certificates in Apache web server.,technical_documentation
+Install Python dependencies using pip and virtual environments.,technical_documentation
+Database optimization techniques for large datasets.,technical_documentation
+API authentication methods and security best practices.,technical_documentation
+Docker container deployment on cloud platforms.,technical_documentation
+Machine learning applications in medical diagnosis.,academic_research
+Climate change impacts on global agriculture systems.,academic_research
+Economic effects of remote work on urban development.,academic_research
+Psychological factors in online learning effectiveness.,academic_research
+Renewable energy storage solutions and efficiency.,academic_research
+Just finished an amazing workout at the gym! #fitness,social_media
+Can't believe how beautiful the sunset is today 🌅,social_media
+Looking forward to the weekend with family and friends.,social_media
+This new coffee shop has the best latte in town!,social_media
+Excited to start my new job next week! #career,social_media
+The tablet is lightweight but lacks storage space. This is quite interesting.,product_review
+Great headphones with amazing sound quality for the price. This is quite interesting.,product_review
+I think this camera takes stunning photos in low light conditions.,product_review
+It seems that great headphones with amazing sound quality for the price.,product_review
+Great headphones with amazing sound quality for the price. This is quite interesting.,product_review
+It seems that the tablet is lightweight but lacks storage space.,product_review
+I think this camera takes stunning photos in low light conditions.,product_review
+The tablet is lightweight but lacks storage space. What do you think?,product_review
+"According to experts, the laptop is fast but the screen could be brighter.",product_review
+"In my opinion, this camera takes stunning photos in low light conditions.",product_review
+I think cybersecurity experts warn of emerging online threats.,news_technology
+"According to experts, autonomous vehicles show promising safety test results.",news_technology
+"In my opinion, scientists develop new quantum computing breakthrough.",news_technology
+It seems that new smartphone features revolutionary display technology.,news_technology
+"According to experts, major tech company announces ai research partnership.",news_technology
+Cybersecurity experts warn of emerging online threats. What do you think?,news_technology
+"According to experts, new smartphone features revolutionary display technology.",news_technology
+"In my opinion, cybersecurity experts warn of emerging online threats.",news_technology
+New smartphone features revolutionary display technology. This is quite interesting.,news_technology
+New smartphone features revolutionary display technology. This is quite interesting.,news_technology
+I think how can i reset my password for online banking?,customer_service
+"In my opinion, can you help me track my recent order shipment?",customer_service
+Can you help me track my recent order shipment? What do you think?,customer_service
+I think i need help with returning a damaged product.,customer_service
+I think how can i reset my password for online banking?,customer_service
+I think i want to cancel my subscription service.,customer_service
+"According to experts, can you help me track my recent order shipment?",customer_service
+"According to experts, can you help me track my recent order shipment?",customer_service
+It seems that i want to cancel my subscription service.,customer_service
+"According to experts, how can i reset my password for online banking?",customer_service
+"According to experts, install python dependencies using pip and virtual environments.",technical_documentation
+Install Python dependencies using pip and virtual environments. What do you think?,technical_documentation
+"According to experts, install python dependencies using pip and virtual environments.",technical_documentation
+I think docker container deployment on cloud platforms.,technical_documentation
+"According to experts, install python dependencies using pip and virtual environments.",technical_documentation
+I think install python dependencies using pip and virtual environments.,technical_documentation
+API authentication methods and security best practices. What do you think?,technical_documentation
+"In my opinion, api authentication methods and security best practices.",technical_documentation
+Docker container deployment on cloud platforms. This is quite interesting.,technical_documentation
+Install Python dependencies using pip and virtual environments. This is quite interesting.,technical_documentation
+"In my opinion, climate change impacts on global agriculture systems.",academic_research
+"According to experts, psychological factors in online learning effectiveness.",academic_research
+Psychological factors in online learning effectiveness. This is quite interesting.,academic_research
+Machine learning applications in medical diagnosis. This is quite interesting.,academic_research
+"In my opinion, renewable energy storage solutions and efficiency.",academic_research
+"In my opinion, machine learning applications in medical diagnosis.",academic_research
+"According to experts, machine learning applications in medical diagnosis.",academic_research
+It seems that economic effects of remote work on urban development.,academic_research
+It seems that machine learning applications in medical diagnosis.,academic_research
+"In my opinion, economic effects of remote work on urban development.",academic_research
+Looking forward to the weekend with family and friends. This is quite interesting.,social_media
+I think can't believe how beautiful the sunset is today 🌅,social_media
+"According to experts, just finished an amazing workout at the gym! #fitness",social_media
+"According to experts, just finished an amazing workout at the gym! #fitness",social_media
+"In my opinion, can't believe how beautiful the sunset is today 🌅",social_media
+It seems that excited to start my new job next week! #career,social_media
+This new coffee shop has the best latte in town! What do you think?,social_media
+It seems that looking forward to the weekend with family and friends.,social_media
+It seems that just finished an amazing workout at the gym! #fitness,social_media
+Excited to start my new job next week! #career What do you think?,social_media
