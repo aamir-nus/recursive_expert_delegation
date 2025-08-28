@@ -338,11 +338,16 @@ class ConfigLoader:
             },
             'active_learning': {
                 'batch_size': 100,
-                'samples_per_iteration': 50,
+                'samples_per_iteration': 100,
                 'max_iterations': 10,
                 'min_information_gain': 0.01,
                 'retrain_threshold': 100,
-                'retrain_all': False
+                'retrain_all': False,
+                # Stopping criteria for active learning
+                'stop_mode': 'informative_then_all_predicted',  # Options: 'informative_only', 'informative_then_all_predicted'
+                #   - 'informative_only': Stop when no more informative samples are found (current behavior)
+                #   - 'informative_then_all_predicted': After no more informative samples, continue for N iterations validating all predicted samples
+                'all_predicted_iterations': 3  # Only used if stop_mode is 'informative_then_all_predicted'
             }
         }
     

@@ -33,26 +33,31 @@ LOGGING ARCHITECTURE:
 │   └── Individual experiment directories with models and data
 """
 
-import sys
+import json
 import logging
-from pathlib import Path
+import os
+import sys
+import traceback
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
-import numpy as np
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
 
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from red.core.classifier import SubsetClassifier
 from red.pipelines.initial_training import InitialTrainingPipeline
 from red.pipelines.active_learning import ActiveLearningLoop
+
+def sanitize_subset_id(subset_id):
+    """Sanitize subset_id for safe file paths."""
+    return str(subset_id).replace(' ', '_').replace('/', '_')
 
 def setup_logging(log_dir: Path, run_name: str):
     """Setup logging for a specific run."""
     log_dir.mkdir(exist_ok=True)
-    
-    # Create log filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"{run_name}_{timestamp}.log"
     
@@ -252,26 +257,65 @@ def load_final_training_data(output_dir):
         pass
     return [], []
 
-def predict_on_test_data(components_dir, test_texts, logger):
-    """Make predictions on test data using trained classifiers."""
+def predict_on_test_data(components_dir, test_texts, logger, test_labels=None):
+    """Make predictions on test data using trained classifiers and subset mapping."""
     try:
-        # This is a simplified prediction - in practice you'd load the trained models
-        # For now, we'll return dummy predictions
-        logger.warning("Using dummy predictions - implement actual model loading for real evaluation")
-        print("Using dummy predictions - implement actual model loading for real evaluation")
-
-        # Return random predictions for demonstration
-        unique_labels = ['business', 'entertainment', 'politics', 'sport', 'tech']
-        predictions = np.random.choice(unique_labels, size=len(test_texts))
-
-        pred_info = f"Generated {len(predictions)} predictions using {len(unique_labels)} classes"
-        logger.info(pred_info)
-        print(pred_info)
-
-        return predictions.tolist()
+        # Load subset mapping (subset_id -> [labels])
+        subset_mapping_path = os.path.join(components_dir, "subset_mapping.json")
+        if not os.path.exists(subset_mapping_path):
+            logger.error(f"Subset mapping not found: {subset_mapping_path}")
+            return []
+        with open(subset_mapping_path, 'r') as f:
+            subset_mapping = json.load(f)
+        
+        # Create reverse mapping (label -> subset_id)
+        label_to_subset = {}
+        for subset_id, labels in subset_mapping.items():
+            for label in labels:
+                label_to_subset[label] = subset_id
+        
+        # Load classifiers by subset_id
+        classifiers_dir = os.path.join(components_dir, "classifiers")
+        subset_ids = set(subset_mapping.keys())
+        classifiers = {}
+        for subset_id in subset_ids:
+            safe_id = sanitize_subset_id(subset_id)
+            classifier_path = os.path.join(classifiers_dir, f"{safe_id}")
+            if os.path.exists(f"{classifier_path}_metadata.pkl"):
+                classifiers[subset_id] = SubsetClassifier.load(classifier_path)
+            else:
+                logger.warning(f"Classifier for subset {subset_id} not found at {classifier_path}")
+        
+        predictions = []
+        if test_labels is not None:
+            for text, label in zip(test_texts, test_labels):
+                subset_id = label_to_subset.get(label)
+                if subset_id is None:
+                    logger.warning(f"Label '{label}' not found in subset mapping")
+                    pred = SubsetClassifier.NOISE_LABEL
+                else:
+                    clf = classifiers.get(subset_id)
+                    if clf:
+                        try:
+                            pred = clf.predict([text])[0]
+                        except Exception as e:
+                            logger.warning(f"Prediction failed for subset {subset_id}: {e}")
+                            pred = SubsetClassifier.NOISE_LABEL
+                    else:
+                        logger.warning(f"No classifier found for subset_id {subset_id} (label: {label})")
+                        pred = SubsetClassifier.NOISE_LABEL
+                predictions.append(pred)
+        else:
+            logger.error("test_labels must be provided for correct subset mapping.")
+            return []
+        
+        logger.info(f"Generated {len(predictions)} predictions using {len(classifiers)} classifiers")
+        logger.info(f"Label to subset mapping contains {len(label_to_subset)} labels")
+        return predictions
     except Exception as e:
         error_msg = f"Prediction failed: {e}"
         logger.error(error_msg)
+        logger.error(traceback.format_exc())
         print(error_msg)
         return []
 
@@ -348,9 +392,9 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
         
         al_results = loop.run(
             unlabeled_data_path=unlabeled_path,
-            max_iterations=5,
+            max_iterations=10,
             batch_size=20,
-            samples_per_iteration=10
+            samples_per_iteration=100
         )
         
         if al_results['status'] != 'success':
@@ -371,7 +415,7 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
         true_labels = test_data['label_name'].tolist()
         
         # Make predictions (simplified for demo)
-        predicted_labels = predict_on_test_data(components_dir, test_texts, logger)
+        predicted_labels = predict_on_test_data(components_dir, test_texts, logger, true_labels)
         
         if predicted_labels:
             # Ensure we have the same number of predictions as test samples
@@ -407,7 +451,6 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
         
     except Exception as e:
         logger.error(f"Experiment failed: {e}")
-        import traceback
         logger.error(traceback.format_exc())
         return None
 
@@ -487,8 +530,8 @@ def main():
 
         # Show class distribution
         class_counts = dataframe['label_name'].value_counts()
-        main_logger.info(f"\nClass distribution (showing top 20 classes):")
-        print(f"\nClass distribution (showing top 20 classes):")
+        main_logger.info("\nClass distribution (showing top 20 classes):")
+        print("\nClass distribution (showing top 20 classes):")
 
         # Show top 20 classes and their sample counts
         top_classes = class_counts.head(20)
@@ -550,7 +593,6 @@ def main():
         create_comparison_table(all_results, comparison_file, main_logger)
 
         # Save detailed results
-        import json
         results_file = base_dir / f"detailed_results_{timestamp}.json"
         main_logger.info(f"Saving detailed results: {results_file}")
         print(f"Saving detailed results: {results_file}")
@@ -591,54 +633,10 @@ def main():
         error_msg = f"\nERROR: {e}"
         if 'main_logger' in locals():
             main_logger.error(error_msg)
-            import traceback
             main_logger.error(traceback.format_exc())
         print(error_msg)
-        import traceback
         traceback.print_exc()
         return 1
 
-def test_data_split():
-    """Quick test to verify the data splitting logic works correctly."""
-    import pandas as pd
-
-    # Create a mock dataset with known class sizes
-    data = []
-    class_sizes = [5, 15, 25, 35, 45, 55]  # Some classes won't have enough samples
-
-    for i, size in enumerate(class_sizes):
-        for j in range(size):
-            data.append({
-                'text': f'text_{i}_{j}',
-                'label_name': f'class_{i}'
-            })
-
-    df = pd.DataFrame(data)
-
-    print("Testing data split with 30 samples per class...")
-    print(f"Original dataset: {len(df)} samples")
-
-    # Test the split function (without logger for simplicity)
-    try:
-        train_data, test_data = split_dataframe(df, 30)
-
-        print(f"Training data: {len(train_data)} samples")
-        print(f"Test data: {len(test_data)} samples")
-
-        # Check class distribution in training data
-        train_class_counts = train_data.groupby('label_name').size()
-        print("\nTraining data class distribution:")
-        for class_name, count in train_class_counts.items():
-            print(f"  {class_name}: {count} samples")
-
-        # Check that we got some valid training data
-        return len(train_data) > 0 and len(test_data) > 0
-    except Exception as e:
-        print(f"Test failed with error: {e}")
-        return False
-
 if __name__ == "__main__":
-    # Quick test before running full benchmark
-    if test_data_split():
-        print("\n✓ Data splitting test passed!\n")
     sys.exit(main())
