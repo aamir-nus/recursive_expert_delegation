@@ -156,6 +156,12 @@ active_learning:
   # Whether to retrain all classifiers or only affected ones
   retrain_all: false
 
+  # Stopping criteria for active learning
+  stop_mode: "informative_then_all_predicted"  # Options: "informative_only", "informative_then_all_predicted"
+  #   - "informative_only": Stop when no more informative samples are found (current behavior)
+  #   - "informative_then_all_predicted": After no more informative samples, continue for N iterations validating all predicted samples
+  all_predicted_iterations: 3  # Only used if stop_mode is "informative_then_all_predicted"
+
 # Training Pipeline Settings
 training:
   # Whether to balance classes during training

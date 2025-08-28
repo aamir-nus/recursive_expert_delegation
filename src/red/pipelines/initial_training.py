@@ -15,6 +15,9 @@ from ..core.validator import LLMValidator
 from ..data.data_manager import DataManager
 from ..config.config_loader import get_config
 
+def sanitize_subset_id(subset_id):
+    return str(subset_id).replace(' ', '_').replace('/', '_')
+
 class InitialTrainingPipeline:
     """
     Orchestrates the initial setup and training of the R.E.D. system.
@@ -235,19 +238,15 @@ class InitialTrainingPipeline:
                     subset_labels=subset_labels
                 )
                 
-                # Get training data for this subset
-                subset_data = self.data_manager.get_subset_data(subset_id)
-                noise_data = self.data_manager.get_noise_data(subset_id, max_samples=1000)
-                
-                if len(subset_data['texts']) == 0:
+                # Get training data for this subset (with noise oversampling)
+                training_data = self.data_manager.get_training_data_with_noise(subset_id)
+                if len(training_data['texts']) == 0:
                     print(f"  ⚠ No training data for {subset_id}, skipping...")
                     continue
-                
                 # Train classifier
                 training_stats = classifier.train(
-                    texts=subset_data['texts'],
-                    labels=subset_data['labels'],
-                    noise_texts=noise_data,
+                    texts=training_data['texts'],
+                    labels=training_data['labels'],
                     validation_split=self.classifier_config.get('validation_split', 0.2)
                 )
                 
@@ -331,8 +330,10 @@ class InitialTrainingPipeline:
             
             # Save subset classifiers
             for subset_id, classifier in self.subset_classifiers.items():
-                classifier_path = classifiers_dir / f"{subset_id}"
+                safe_id = sanitize_subset_id(subset_id)
+                classifier_path = classifiers_dir / f"{safe_id}"
                 classifier.save(str(classifier_path))
+                print(f"[DEBUG] Saved classifier for {subset_id} as {safe_id} with {len(classifier.training_texts)} training samples.")
                 save_stats['saved_components'].append(f'classifier_{subset_id}')
                 save_stats['output_paths'][f'classifier_{subset_id}'] = str(classifier_path)
             
@@ -407,10 +408,11 @@ class InitialTrainingPipeline:
             classifiers_dir = components_dir / "classifiers"
             if classifiers_dir.exists():
                 for subset_id in self.subset_mapping.keys():
-                    classifier_path = classifiers_dir / f"{subset_id}"
+                    safe_id = sanitize_subset_id(subset_id)
+                    classifier_path = classifiers_dir / f"{safe_id}"
                     if classifier_path.exists():
                         self.subset_classifiers[subset_id] = SubsetClassifier.load(str(classifier_path))
-                        print(f"✓ Loaded classifier for {subset_id}")
+                        print(f"[DEBUG] Loaded classifier for {subset_id} as {safe_id} with {len(self.subset_classifiers[subset_id].training_texts)} training samples.")
             
             # Load data manager state
             data_manager_path = components_dir / "data_manager.pkl"

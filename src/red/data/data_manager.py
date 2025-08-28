@@ -613,3 +613,34 @@ class DataManager:
         # Shuffle and limit
         random.shuffle(examples)
         return examples[:max_examples]
+
+    def get_training_data_with_noise(self, subset_id: str) -> Dict[str, list]:
+        """
+        Get training data for a subset, including noise samples with '__NOISE__' label.
+        Returns a dict with 'texts' and 'labels'.
+        """
+        from ..core.classifier import SubsetClassifier
+        config = get_config()
+        noise_oversample_factor = config.get('classifier', {}).get('noise_oversample_factor', 2.0)
+        # Get in-subset data
+        subset_data = self.get_subset_data(subset_id)
+        subset_texts = subset_data['texts']
+        subset_labels = subset_data['labels']
+        # Get noise candidates
+        noise_texts = self.get_noise_data(subset_id)
+        # Compute how many noise samples to add
+        if subset_labels:
+            avg_samples_per_class = len(subset_labels) / len(set(subset_labels))
+        else:
+            avg_samples_per_class = 1
+        target_noise_samples = int(avg_samples_per_class * noise_oversample_factor)
+        # Sample noise
+        if len(noise_texts) > target_noise_samples:
+            sampled_noise = random.sample(noise_texts, target_noise_samples)
+        else:
+            # Repeat if not enough
+            sampled_noise = (noise_texts * (target_noise_samples // max(1, len(noise_texts)) + 1))[:target_noise_samples]
+        # Combine
+        all_texts = subset_texts + sampled_noise
+        all_labels = subset_labels + [SubsetClassifier.NOISE_LABEL] * len(sampled_noise)
+        return {'texts': all_texts, 'labels': all_labels}
