@@ -16,6 +16,9 @@ from ..core.validator import LLMValidator
 from ..data.data_manager import DataManager
 from ..config.config_loader import get_config
 
+def sanitize_subset_id(subset_id):
+    return str(subset_id).replace(' ', '_').replace('/', '_')
+
 class ActiveLearningLoop:
     """
     Main recursive engine of the R.E.D. framework.
@@ -79,6 +82,14 @@ class ActiveLearningLoop:
         """
         Run the complete active learning loop.
         
+        Stopping logic (configurable):
+        - stop_mode: 'informative_only' (default):
+            Stop when no more informative samples are found (as before).
+        - stop_mode: 'informative_then_all_predicted':
+            After no more informative samples, continue for N (all_predicted_iterations) iterations,
+            validating all predicted samples, then stop.
+        This allows the system to validate all samples, not just the most informative ones.
+        
         Args:
             unlabeled_data_path: Path to unlabeled data file
             max_iterations: Maximum number of iterations
@@ -98,6 +109,8 @@ class ActiveLearningLoop:
         max_iterations = max_iterations or self.active_learning_config.get('max_iterations', 10)
         batch_size = batch_size or self.active_learning_config.get('batch_size', 100)
         samples_per_iteration = samples_per_iteration or self.active_learning_config.get('samples_per_iteration', 50)
+        stop_mode = self.active_learning_config.get('stop_mode', 'informative_only')
+        all_predicted_iterations = self.active_learning_config.get('all_predicted_iterations', 3)
         
         try:
             # Step 1: Load trained components
@@ -118,6 +131,8 @@ class ActiveLearningLoop:
             print("="*50)
             
             iteration_results = []
+            informative_exhausted = False
+            all_predicted_counter = 0
             
             for iteration in range(max_iterations):
                 self.current_iteration = iteration + 1
@@ -125,23 +140,42 @@ class ActiveLearningLoop:
                 print(f"\n{'='*20} ITERATION {self.current_iteration} {'='*20}")
                 
                 # Run single iteration
-                iter_result = self._run_iteration(
+                iter_result, informative_found = self._run_iteration_refactored(
                     batch_size=batch_size,
-                    samples_per_iteration=samples_per_iteration
+                    samples_per_iteration=samples_per_iteration,
+                    informative_exhausted=informative_exhausted
                 )
-                
                 iteration_results.append(iter_result)
                 
+                # If informative samples are exhausted, increment counter
+                if not informative_found:
+                    if not informative_exhausted:
+                        informative_exhausted = True
+                        print("No more informative samples found. Switching to all predicted samples mode.")
+                    all_predicted_counter += 1
+                else:
+                    all_predicted_counter = 0  # Reset if we find informative samples again
+                
                 # Check convergence
-                if self._check_convergence(iter_result):
-                    print(f"\n✓ Convergence achieved after {self.current_iteration} iterations")
-                    self.convergence_achieved = True
-                    break
+                if informative_exhausted:
+                    if stop_mode == 'informative_only':
+                        print(f"\n✓ Stopping after informative samples exhausted (mode: informative_only)")
+                        self.convergence_achieved = True
+                        break
+                    elif stop_mode == 'informative_then_all_predicted':
+                        if all_predicted_counter >= all_predicted_iterations:
+                            print(f"\n✓ Stopping after {all_predicted_iterations} all-predicted iterations (mode: informative_then_all_predicted)")
+                            self.convergence_achieved = True
+                            break
+                else:
+                    if self._check_convergence(iter_result):
+                        print(f"\n✓ Convergence achieved after {self.current_iteration} iterations")
+                        self.convergence_achieved = True
+                        break
                 
                 print(f"Iteration {self.current_iteration} completed. "
                       f"Validated: {iter_result['validated_samples']}, "
                       f"Time: {iter_result['iteration_time']:.2f}s")
-            
             # Step 4: Final retraining
             print("\n" + "="*50)
             print("STEP 4: FINAL RETRAINING")
@@ -184,7 +218,7 @@ class ActiveLearningLoop:
             print("="*60)
             
             return results
-            
+        
         except Exception as e:
             print(f"\nERROR during active learning: {e}")
             error_results = {
@@ -195,7 +229,7 @@ class ActiveLearningLoop:
             }
             self._save_results_summary(error_results)
             raise
-    
+
     def _load_components(self) -> None:
         """Load all trained components from disk."""
         print(f"Loading components from: {self.components_dir}")
@@ -231,10 +265,11 @@ class ActiveLearningLoop:
         classifiers_dir = self.components_dir / "classifiers"
         if classifiers_dir.exists():
             for subset_id in self.subset_mapping.keys():
-                classifier_path = classifiers_dir / f"{subset_id}"
+                safe_id = sanitize_subset_id(subset_id)
+                classifier_path = classifiers_dir / f"{safe_id}"
                 try:
                     self.subset_classifiers[subset_id] = SubsetClassifier.load(str(classifier_path))
-                    print(f"✓ Loaded classifier for {subset_id}")
+                    print(f"[DEBUG] Loaded classifier for {subset_id} as {safe_id} with {len(self.subset_classifiers[subset_id].training_texts)} training samples.")
                 except Exception as e:
                     print(f"⚠ Failed to load classifier for {subset_id}: {e}")
         
@@ -276,66 +311,48 @@ class ActiveLearningLoop:
         
         print(f"✓ Loaded {num_samples} unlabeled samples")
     
-    def _run_iteration(self, batch_size: int, samples_per_iteration: int) -> Dict[str, Any]:
-        """Run a single active learning iteration."""
+    def _run_iteration_refactored(self, batch_size: int, samples_per_iteration: int, informative_exhausted: bool):
+        """
+        Run a single active learning iteration, supporting both informative and all-predicted modes.
+        Returns (iter_result, informative_found: bool)
+        - informative_found: True if informative samples were found this iteration, False otherwise.
+        - If informative_exhausted is True, all predictions are validated (not just the most informative).
+        """
         iteration_start = time.time()
-        
         # Get batch of unlabeled data
         start_idx = (self.current_iteration - 1) * batch_size
         batch_texts = self.data_manager.get_unlabeled_batch(
             batch_size=batch_size,
             start_index=start_idx
         )
-        
         if not batch_texts:
             print("No more unlabeled data to process")
-            return {
+            return ({
                 'iteration': self.current_iteration,
                 'batch_size': 0,
                 'predictions_made': 0,
                 'validated_samples': 0,
                 'retrained_classifiers': 0,
                 'iteration_time': time.time() - iteration_start
-            }
-        
+            }, False)
         print(f"Processing batch of {len(batch_texts)} samples...")
-        
-        # Make predictions for each subset
-        all_predictions = []
-        prediction_metadata = []
-        
-        for subset_id, classifier in self.subset_classifiers.items():
-            # Get predictions and uncertainties
-            predictions = classifier.predict(batch_texts)
-            uncertainties = classifier.calculate_uncertainty(batch_texts)
-            probabilities = classifier.predict_proba(batch_texts)
-            
-            for i, (text, pred, uncertainty, probs) in enumerate(
-                zip(batch_texts, predictions, uncertainties, probabilities)
-            ):
-                if pred != "__NOISE__":  # Only consider non-noise predictions
-                    all_predictions.append({
-                        'text': text,
-                        'predicted_label': pred,
-                        'subset_id': subset_id,
-                        'uncertainty': uncertainty,
-                        'max_probability': np.max(probs),
-                        'classifier': classifier,
-                        'batch_index': start_idx + i
-                    })
-        
+        # Make predictions
+        all_predictions = self._make_predictions(batch_texts)
         print(f"Made {len(all_predictions)} non-noise predictions")
-        
-        # Select most informative samples
-        informative_samples = self._select_informative_samples(
-            all_predictions, samples_per_iteration
-        )
-        
-        print(f"Selected {len(informative_samples)} informative samples for validation")
-        
+        # Select samples
+        if not informative_exhausted:
+            informative_samples = self._select_informative_samples(
+                all_predictions, samples_per_iteration
+            )
+            informative_found = len(informative_samples) > 0
+            samples_to_validate = informative_samples
+        else:
+            # All-predicted mode: validate all predictions
+            samples_to_validate = all_predictions
+            informative_found = False
+        print(f"Selected {len(samples_to_validate)} samples for validation")
         # Validate selected samples
-        validated_samples = self._validate_samples(informative_samples)
-        
+        validated_samples = self._validate_samples(samples_to_validate)
         # Add validated samples to training data
         new_training_samples = 0
         for sample in validated_samples:
@@ -344,37 +361,29 @@ class ActiveLearningLoop:
                     text=sample['text'],
                     label=sample['predicted_label'],
                     confidence=sample['validation_result'].get('confidence', 1.0),
-                    validation_metadata=sample['validation_result']
                 )
                 new_training_samples += 1
-        
         self.total_validated_samples += new_training_samples
-        
         # Check if retraining is needed
         retrained_classifiers = 0
         retrain_threshold = self.active_learning_config.get('retrain_threshold', 100)
-        
         if new_training_samples > 0 and self.total_validated_samples % retrain_threshold == 0:
             retrained_classifiers = self._retrain_classifiers()
-        
         iteration_time = time.time() - iteration_start
         self.processing_times.append(iteration_time)
-        
         # Store iteration statistics
         iter_stats = {
             'iteration': self.current_iteration,
             'batch_size': len(batch_texts),
             'predictions_made': len(all_predictions),
-            'informative_samples': len(informative_samples),
+            'informative_samples': len(samples_to_validate),
             'validated_samples': new_training_samples,
             'retrained_classifiers': retrained_classifiers,
             'iteration_time': iteration_time,
             'cumulative_validated': self.total_validated_samples
         }
-        
         self.iteration_stats.append(iter_stats)
-        
-        return iter_stats
+        return iter_stats, informative_found
     
     def _select_informative_samples(self, 
                                   predictions: List[Dict], 
@@ -469,7 +478,7 @@ class ActiveLearningLoop:
                     new_labels=subset_data['labels'],
                     noise_texts=noise_data
                 )
-                
+                print(f"[DEBUG] After retrain, classifier for {subset_id} has {len(self.subset_classifiers[subset_id].training_texts)} training samples.")
                 retrained_count += 1
                 print(f"  ✓ {subset_id} retrained successfully")
                 
@@ -528,7 +537,7 @@ class ActiveLearningLoop:
                     new_labels=subset_data['labels'],
                     noise_texts=noise_data
                 )
-                
+                print(f"[DEBUG] After final retrain, classifier for {subset_id} has {len(classifier.training_texts)} training samples.")
                 retrain_stats['individual_stats'][subset_id] = training_stats
                 retrain_stats['successfully_retrained'] += 1
                 
@@ -562,8 +571,10 @@ class ActiveLearningLoop:
         try:
             # Save updated classifiers
             for subset_id, classifier in self.subset_classifiers.items():
-                classifier_path = classifiers_dir / f"{subset_id}"
+                safe_id = sanitize_subset_id(subset_id)
+                classifier_path = classifiers_dir / f"{safe_id}"
                 classifier.save(str(classifier_path))
+                print(f"[DEBUG] Saved classifier for {subset_id} as {safe_id} with {len(classifier.training_texts)} training samples.")
                 save_stats['saved_components'].append(f'classifier_{subset_id}')
                 save_stats['output_paths'][f'classifier_{subset_id}'] = str(classifier_path)
             
@@ -633,3 +644,24 @@ class ActiveLearningLoop:
             'iteration_stats': self.iteration_stats,
             'performance_stats': self._get_performance_stats()
         }
+
+    def _make_predictions(self, texts: list) -> list:
+        """
+        Make predictions for a batch of texts using all subset classifiers.
+        Returns a list of dicts: {'text', 'predicted_label', 'uncertainty', ...}
+        """
+        all_predictions = []
+        for subset_id, classifier in self.subset_classifiers.items():
+            # Predict labels and uncertainties for this subset
+            predicted_labels = classifier.predict(texts)
+            uncertainties = classifier.calculate_uncertainty(texts)
+            for text, label, uncertainty in zip(texts, predicted_labels, uncertainties):
+                # Only include non-noise predictions
+                if label != classifier.NOISE_LABEL:
+                    all_predictions.append({
+                        'text': text,
+                        'predicted_label': label,
+                        'uncertainty': uncertainty,
+                        'subset_id': subset_id
+                    })
+        return all_predictions
