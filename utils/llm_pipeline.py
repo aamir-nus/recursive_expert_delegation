@@ -3,6 +3,7 @@ import asyncio
 import logging
 import nest_asyncio
 import time
+import json
 
 from tqdm import tqdm
 
@@ -68,6 +69,10 @@ class AsyncLLMPipeline:
 
                 else:
                     decoded_response = resp['choices'][0]['message']['content']
+                
+                if isinstance(decoded_response, str):
+                    decoded_response = decoded_response.replace("<think>", "").replace("</think>", "").strip()
+
             except (TypeError, KeyError) as e:
                 logger.error(f"Error decoding response: {e}")
                 logger.debug(f"Response: {resp}")

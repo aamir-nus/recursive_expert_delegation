@@ -8,7 +8,7 @@ R.E.D. (Recursive Expert Delegation) is designed to solve the challenging proble
 
 - **Large number of classes** (100-1000+)
 - **Limited training data** per class (30-100 samples)
-- **High accuracy requirements** (90%+ precision)
+- **High precision requirements** (90%+ precision)
 - **Cost and speed constraints**
 
 ```mermaid
@@ -214,7 +214,7 @@ cp .example.env .env
 #### 🏠 **Ollama (Local Models)** - Privacy focused
 
 - **Installation**: Visit [Ollama.ai](https://ollama.ai/) and install locally
-- **Models**: `qwen3-8b`, `phi4-mini`, `deepseek-r1-8b`
+- **Models**: `qwen3-8b`, `phi4-mini`, `gemma3-4b`
 - **Cost**: Free (runs on your hardware)
 - **Setup**:
   ```bash
@@ -393,11 +393,11 @@ active_learning:
 
 R.E.D. automatically selects optimal models and settings based on your performance priority:
 
-| Mode | Embedding Model | Classifier | UMAP Components | Use Case |
-|------|----------------|------------|-----------------|----------|
-| **Speed** | all-MiniLM-L6-v2 | Logistic Regression | 32 | Fast prototyping, limited compute |
-| **Balanced** | all-mpnet-base-v2 | Random Forest | 50 | General production use |
-| **Accuracy** | Qwen/Qwen3-Embedding-0.6B | SetFit | 64 | Research, maximum performance |
+| Mode               | Embedding Model           | Classifier          | UMAP Components | Use Case                          |
+| ------------------ | ------------------------- | ------------------- | --------------- | --------------------------------- |
+| **Speed**    | all-MiniLM-L6-v2          | Logistic Regression | 32              | Fast prototyping, limited compute |
+| **Balanced** | all-mpnet-base-v2         | Random Forest       | 50              | General production use            |
+| **Accuracy** | Qwen/Qwen3-Embedding-0.6B | SetFit              | -               | Research, maximum performance     |
 
 Configure performance mode in `main_config.yaml`:
 
@@ -595,7 +595,7 @@ python src/scripts/run_active_learning.py \
 | ----------------------------- | ------------------------------------------------------------------------------------- | ------------------- | -------------------------------------------------- |
 | **🌐 OpenRouter**       | `glm-4.5-air` (free)<br />`deepseek-r1-0528` (free)<br />`qwen3-30b-a3b` (free) | Free & Paid tiers   | [Get API Key](https://openrouter.ai/keys)             |
 | **🤖 Google AI Studio** | `gemini-2.0-flash`<br />`gemini-2.5-flash`<br />`gemini-2.5-pro-exp`            | Free tier available | [Get API Key](https://aistudio.google.com/app/apikey) |
-| **🏠 Ollama**           | `deepseek-r1:8b`<br />`qwen3:8b`<br />`phi4-mini:latest`                        | Free (local)        | [Install Ollama](https://ollama.ai/)                  |
+| **🏠 Ollama**           | `gemma3:4b`<br />`qwen3:8b`<br />`phi4-mini:latest`                             | Free (local)        | [Install Ollama](https://ollama.ai/)                  |
 | **🧠 Anthropic**        | `claude-3.5-sonnet`<br />`claude-3.7-sonnet`                                      | Pay-per-use         | [Get API Key](https://console.anthropic.com/)         |
 | **🔍 Perplexity**       | `sonar`<br />`sonar-small`                                                        | Pay-per-use         | [Get API Key](https://www.perplexity.ai/settings/api) |
 
@@ -710,7 +710,7 @@ If you use R.E.D. in your research, please cite:
 ```bibtex
 @article{red2025,
   title={R.E.D.: Scaling Text Classification with Expert Delegation},
-  author={[Authors]},
+  author={[Aamir Syed]},
   journal={[Journal]},
   year={2025}
 }
