@@ -126,11 +126,6 @@ class SubsetClassifier:
             # Uses the same embedding model as configured for consistency
             return SetFitModel.from_pretrained(
                 self.embedding_model_name,
-                use_differentiable_head=True,  # Better performance for small datasets
-                head_params={
-                    "hidden_dropout_prob": 0.1,  # Regularization for small datasets
-                    "hidden_size": 128  # Compact head for efficiency
-                }
             )
         else:
             raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
@@ -155,9 +150,9 @@ class SubsetClassifier:
         trainer = SetFitTrainer(
             model=self.classifier,
             train_dataset=train_dataset,
-            num_iterations=20,  # SetFit training iterations, good default for few-shot
+            num_iterations=10,  # SetFit training iterations, good default for few-shot
             num_epochs=1,  # Number of epochs per iteration
-            batch_size=16,  # Batch size for contrastive learning
+            batch_size=8,  # Batch size for contrastive learning
             seed=self.random_state,
             column_mapping={"text": "text", "label": "label"}
         )

@@ -551,7 +551,9 @@ def main():
         print(class_stats)
 
         # Define experiment configurations
-        samples_per_class_configs = [30, 50, 100]
+        # samples_per_class_configs = [30, 50, 100]
+        # samples_per_class_configs = [100]
+        samples_per_class_configs = [100, 50, 30]
         config_msg = f"\nRunning {len(samples_per_class_configs)} experiments with samples per class: {samples_per_class_configs}"
         main_logger.info(config_msg)
         print(config_msg)

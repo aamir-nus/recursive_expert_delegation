@@ -292,6 +292,50 @@ The primary goal was to investigate whether these smaller models could help the 
 
 The models chosen for this test (`gemma3-4b`, `qwen3-8B`, `glm-4.5-air`) represent a range of models that are known for their relative high-performing, small-footprint performance. These models are suitable for private or on-system deployment, where data security is a priority. This methodology is intended to showcase the potential of using the R.E.D. framework to develop highly accurate, specialized classifiers without relying on larger, external LLM APIs for the validation step.
 
+## Standard Iteration Performance Comparison (10 Iterations)
+
+This section compares the performance of three LLM models (glm-4.5-air, qwen3-8B, gemma3-4b) when used as validators in the R.E.D. framework with standard active learning settings (10 iterations). All experiments use the same base configuration:
+
+- **Embedding Model**: `all-mpnet-base-v2` (balanced mode)
+- **Classification Model**: `random_forest` (balanced mode)
+- **UMAP Dimensions**: 50 (balanced mode)
+- **Active Learning**: 10 iterations, batch size 100, samples per iteration 100
+- **LLM Validator**: Varied across experiments (only component that changes)
+
+### Performance Comparison Table
+
+| Model                 | Samples Per Class | Accuracy | Precision | Recall | F1-Score | Total Time (s) | Validated Samples | Avg. Time per Sample (s) |
+| :-------------------- | :---------------- | :------- | :-------- | :----- | :------- | :------------- | :---------------- | :----------------------- |
+| **glm-4.5-air** | 100               | 86.50%   | 90.54%    | 86.50% | 88.06%   | 420.19         | 272               | 1.55                     |
+|                       | 50                | 78.99%   | 84.91%    | 78.99% | 80.75%   | 726.32         | 299               | 2.43                     |
+|                       | 30                | 79.40%   | 86.02%    | 79.40% | 80.95%   | 904.33         | 329               | 2.75                     |
+| **qwen3-8B**    | 100               | 86.58%   | 90.21%    | 86.58% | 87.89%   | 1068.68        | 321               | 3.33                     |
+|                       | 50                | 79.78%   | 85.44%    | 79.78% | 81.14%   | 11180.27       | 368               | 30.38                    |
+|                       | 30                | 80.02%   | 85.42%    | 80.02% | 80.75%   | 2072.11        | 423               | 4.90                     |
+| **gemma3-4b**   | 100               | 86.65%   | 90.51%    | 86.65% | 88.06%   | 564.41         | 242               | 2.33                     |
+|                       | 50                | 79.74%   | 85.38%    | 79.74% | 81.08%   | 846.97         | 264               | 3.21                     |
+|                       | 30                | 77.79%   | 84.75%    | 77.79% | 79.68%   | 1148.81        | 257               | 4.47                     |
+
+### Key Observations
+
+1. **Top Performance at 100 Samples**: All three models achieve similar high accuracy (~86.5%) when trained on 100 samples per class, with minimal performance differences between them.
+2. **Efficiency Rankings**:
+
+   - **glm-4.5-air**: Most efficient overall, especially at higher sample counts. Best average time per sample (1.55s for 100 samples).
+   - **gemma3-4b**: Second most efficient, good balance of speed and performance.
+   - **qwen3-8B**: Significantly slower, especially at 50 samples (30.38s per sample), but still achieves competitive accuracy.
+3. **Scaling Behavior**: Performance improves consistently with more training samples across all models, with diminishing returns as sample size increases.
+4. **Validation Efficiency**: glm-4.5-air and gemma3-4b show more consistent validation rates, while qwen3-8B has higher variance in validated samples.
+
+### Recommendations for Production Use
+
+- **For Speed**: Use glm-4.5-air with 100 samples per class (best efficiency)
+- **For Balance**: Use gemma3-4b with 100 samples per class (good speed-accuracy trade-off)
+- **For Local Deployment**: Use gemma3-4b (fastest local option with good performance)
+- **For Maximum Accuracy**: Any model with 100 samples per class (all achieve ~86.5% accuracy)
+
+---
+
 ## Comparative Performance of Small Models at High Iterations
 
 This section compares the final performance of the three open-source models after being run for up to 50 iterations in the active learning loop. The recorded performance is on the same set of params, i.e., using the `balanced` mode : [embedding=`all-mpnet-base-v2 `, subset-classifier=`random_forest `, max_iter=`10`] by changing only the llm-validator to one of the three LLM models.
@@ -354,4 +398,4 @@ A key question in this framework is whether it's more beneficial to have a stron
 3. **The Sweet Spot - A Balance of Strengths**: The `qwen3-8B` model offers a compelling balance. It outperforms the smaller `gemma3-4b` model in accuracy while being more accessible than the `glm-4.5-air` model. Its final evaluation metrics are competitive, and its subset classifiers show respectable performance, especially in the 100-sample run where they are closely matched. This suggests that a mid-sized, capable LLM judge combined with a reasonably well-trained base model can provide an optimal trade-off between performance, speed, and resource requirements. For sandboxed environments where data privacy and local execution are paramount, this balance is often the most desirable outcome.
 4. **Suggestion**:
    1. for **balance** : 100 samples per class, 20 active-learning iterations, model=random_forest, embedding=all-mpnet-base-v2
-   2. for **accuracy** : 100 samples per class, 20 active-learning iterations, model=setfit, embedding=qwen3-Embedding-0.6B
+   2. for **accuracy** : 100 samples per class, 10 active-learning iterations, model=setfit, embedding=qwen3-Embedding-0.6B
