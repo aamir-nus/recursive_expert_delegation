@@ -147,9 +147,16 @@ class ModelConfigFactory:
     def get_ollama_config(model_name: str) -> ModelConfig:
         def format_ollama_messages(messages: List[Dict[str, str]]) -> Dict[str, Any]:
             # Ollama with OpenAI-compatible API expects standard OpenAI format
+            processed_messages = [msg.copy() for msg in messages]
+            if "qwen" in model_name or "deepseek" in model_name:
+                for msg in processed_messages:
+                    if msg["role"] == "system":
+                        msg["content"] = msg.get("content", "") + " /no_think"
+                        break
+            
             return {
                 "model": model_name,
-                "messages": messages,
+                "messages": processed_messages,
                 "stream": False,
                 "temperature": 0.0,
                 "max_tokens": 1024
@@ -220,11 +227,14 @@ def get_model_configs(model_name: str) -> ModelConfig:
         "qwen3-4b": (ModelFamily.OLLAMA, "qwen3:4b"),
         "phi4-mini": (ModelFamily.OLLAMA, "phi4-mini:latest"),
         "deepseek-r1-8b": (ModelFamily.OLLAMA, "deepseek-r1:8b"),
-        
+        "gemma3-4b": (ModelFamily.OLLAMA, "gemma3:4b"),
+
         # OpenRouter models
-        "glm-4.5-air": (ModelFamily.OPENROUTER, "z-ai/glm-4.5-air:free"),
+        "glm-4-32b": (ModelFamily.OPENROUTER, "z-ai/glm-4-32b"),
+        "glm-4.5-air": (ModelFamily.OPENROUTER, "z-ai/glm-4.5-air"),
         "deepseek-r1-0528": (ModelFamily.OPENROUTER, "deepseek/deepseek-r1-0528:free"),
         "qwen3-30b-a3b": (ModelFamily.OPENROUTER, "qwen/qwen3-30b-a3b:free"),
+        "gemini-2.5-flash-lite": (ModelFamily.OPENROUTER, "google/gemini-2.5-flash-lite"),
         # "qwen3-30b-a3b-instruct": (ModelFamily.OPENROUTER, "qwen/qwen3-30b-a3b-instruct-2507:free"),
     }
     
