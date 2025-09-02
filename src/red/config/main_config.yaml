@@ -64,7 +64,7 @@ subsetting:
 # Embedding Settings
 embeddings:
   # Auto-selected based on performance.mode, or override with specific model
-  model_name: "Qwen/Qwen3-Embedding-0.6B"  # Options: "auto", or specific model name
+  model_name: "all-mpnet-base-v2"  # Options: "auto", or specific model name
   
   # Model options for different performance modes
   speed_model: "all-MiniLM-L6-v2"
@@ -72,7 +72,7 @@ embeddings:
   accuracy_model: "Qwen/Qwen3-Embedding-0.6B"
   
   # Qwen-specific optimization settings
-  qwen_truncate_dim: 128  # Dimension reduction for Qwen models for efficiency
+  qwen_truncate_dim: 32  # Dimension reduction for Qwen models for efficiency
   
   # Whether to cache embeddings
   enable_cache: true
@@ -92,6 +92,9 @@ classifier:
   speed_type: "logistic_regression"
   balanced_type: "random_forest"
   accuracy_type: "setfit"
+  
+  # Batch size for SetFit training to manage memory
+  setfit_batch_size: 4
   
   # Whether to use embeddings (true) or TF-IDF (false)
   use_embeddings: true
