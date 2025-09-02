@@ -1,0 +1,178 @@
+{
+  "status": "success",
+  "total_time": 119.52350974082947,
+  "data_stats": {
+    "total_samples": 1200,
+    "unique_labels": 12,
+    "label_distribution": {
+      "Appearance on skin (looks/ finish)": 100,
+      "Brand/ Product": 100,
+      "Coverage": 100,
+      "Effectiveness": 100,
+      "Fragrance": 100,
+      "Improves Sleep for me and my family": 100,
+      "Love The Product": 100,
+      "Product Performance": 100,
+      "Shopping": 100,
+      "Skin Condition": 100,
+      "Taste Is Unappealing": 100,
+      "Would Recommend Product": 100
+    },
+    "avg_samples_per_label": 100.0,
+    "min_samples_per_label": 100,
+    "max_samples_per_label": 100
+  },
+  "subset_stats": {
+    "num_subsets": 2,
+    "total_labels": 12,
+    "avg_subset_size": 6.0,
+    "min_subset_size": 4,
+    "max_subset_size": 8,
+    "subset_sizes": [
+      8,
+      4
+    ]
+  },
+  "classifier_stats": {
+    "total_subsets": 2,
+    "trained_classifiers": 2,
+    "failed_classifiers": 0,
+    "individual_stats": {
+      "subset_0": {
+        "subset_id": "subset_0",
+        "subset_labels": [
+          "Appearance on skin (looks/ finish)",
+          "Improves Sleep for me and my family",
+          "Taste Is Unappealing",
+          "Coverage",
+          "Product Performance",
+          "Shopping",
+          "Love The Product",
+          "Effectiveness"
+        ],
+        "train_samples": 640,
+        "train_accuracy": 0.91375,
+        "noise_samples": 0,
+        "label_distribution": {
+          "Appearance on skin (looks/ finish)": 100,
+          "Improves Sleep for me and my family": 100,
+          "Taste Is Unappealing": 100,
+          "Coverage": 100,
+          "Product Performance": 100,
+          "Shopping": 100,
+          "Love The Product": 100,
+          "Effectiveness": 100,
+          "__NOISE__": 0
+        },
+        "validation_accuracy": 0.98125,
+        "classification_report": {
+          "Appearance on skin (looks/ finish)": {
+            "precision": 1.0,
+            "recall": 0.97,
+            "f1-score": 0.9847715736040609,
+            "support": 100.0
+          },
+          "Coverage": {
+            "precision": 0.9836065573770492,
+            "recall": 1.0,
+            "f1-score": 0.9917355371900827,
+            "support": 60.0
+          },
+          "Effectiveness": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "Product Performance": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.98125,
+          "macro avg": {
+            "precision": 0.4959016393442623,
+            "recall": 0.4925,
+            "f1-score": 0.49412677769853586,
+            "support": 160.0
+          },
+          "weighted avg": {
+            "precision": 0.9938524590163935,
+            "recall": 0.98125,
+            "f1-score": 0.987383059948819,
+            "support": 160.0
+          }
+        }
+      },
+      "subset_1": {
+        "subset_id": "subset_1",
+        "subset_labels": [
+          "Brand/ Product",
+          "Skin Condition",
+          "Fragrance",
+          "Would Recommend Product"
+        ],
+        "train_samples": 320,
+        "train_accuracy": 0.9975,
+        "noise_samples": 0,
+        "label_distribution": {
+          "Brand/ Product": 100,
+          "Skin Condition": 100,
+          "Fragrance": 100,
+          "Would Recommend Product": 100,
+          "__NOISE__": 0
+        },
+        "validation_accuracy": 1.0,
+        "classification_report": {
+          "Brand/ Product": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 80.0
+          },
+          "accuracy": 1.0,
+          "macro avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 80.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 80.0
+          }
+        }
+      }
+    }
+  },
+  "validator_stats": {
+    "model_name": "glm-4.5-air",
+    "total_labels": 12,
+    "descriptions_generated": 12,
+    "training_samples": 1200
+  },
+  "save_stats": {
+    "saved_components": [
+      "label_subsetter",
+      "classifier_subset_0",
+      "classifier_subset_1",
+      "validator_cache",
+      "data_manager",
+      "subset_mapping"
+    ],
+    "failed_saves": [],
+    "output_paths": {
+      "label_subsetter": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/label_subsetter.pkl",
+      "classifier_subset_0": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/classifiers/subset_0",
+      "classifier_subset_1": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/classifiers/subset_1",
+      "validator_cache": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/validator_cache.pkl",
+      "data_manager": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/data_manager.pkl",
+      "subset_mapping": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs/components/subset_mapping.json"
+    }
+  },
+  "output_dir": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_100_samples/outputs",
+  "config": "<red.config.config_loader.Config object at 0x7f3c3413bfa0>"
+}
