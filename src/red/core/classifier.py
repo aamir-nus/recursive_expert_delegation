@@ -21,7 +21,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
-from setfit import SetFitModel, SetFitTrainer
+from setfit import SetFitModel, Trainer, TrainingArguments
 from datasets import Dataset
 
 from ..config.config_loader import get_config
@@ -78,6 +78,7 @@ class SubsetClassifier:
         self.noise_oversample_factor = noise_oversample_factor or classifier_config.get('noise_oversample_factor', 2.0)
         self.max_features = max_features or classifier_config.get('max_features', 10000)
         self.random_state = random_state or subsetting_config.get('random_state', 42)
+
         
         # Add noise class to the label set
         self.all_labels = subset_labels + [self.NOISE_LABEL]
@@ -86,8 +87,11 @@ class SubsetClassifier:
         
         # Initialize components
         self.embedding_provider = None
+        self.setfit_batch_size = 8
+
         if use_embeddings:
             self.embedding_provider = EmbeddingProvider(model_name=embedding_model)
+            self.setfit_batch_size = classifier_config.get('setfit_batch_size', 4)
         
         self.vectorizer = None
         self.classifier = None
@@ -124,13 +128,14 @@ class SubsetClassifier:
         elif self.classifier_type == "setfit":
             # SetFit: High-performance few-shot classifier using sentence transformers
             # Uses the same embedding model as configured for consistency
+            embedding_config = get_config().get('embeddings', {})
+            truncate_dim = None
+            if "Qwen" in self.embedding_model_name:
+                truncate_dim = embedding_config.get('qwen_truncate_dim', 128)
+
             return SetFitModel.from_pretrained(
                 self.embedding_model_name,
-                use_differentiable_head=True,  # Better performance for small datasets
-                head_params={
-                    "hidden_dropout_prob": 0.1,  # Regularization for small datasets
-                    "hidden_size": 128  # Compact head for efficiency
-                }
+                truncate_dim=truncate_dim,
             )
         else:
             raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
@@ -151,24 +156,27 @@ class SubsetClassifier:
             "label": labels
         })
         
-        # Create trainer with SetFit-specific parameters
-        trainer = SetFitTrainer(
-            model=self.classifier,
-            train_dataset=train_dataset,
-            num_iterations=20,  # SetFit training iterations, good default for few-shot
-            num_epochs=1,  # Number of epochs per iteration
-            batch_size=16,  # Batch size for contrastive learning
+        # Configure training arguments
+        args = TrainingArguments(
+            output_dir=os.path.join("models", self.subset_id),  # Temporary directory for training artifacts
+            num_epochs=1,  # Epochs for fine-tuning the sentence transformer body
+            num_iterations=4,  # Number of contrastive learning pairs
+            batch_size=self.setfit_batch_size,
             seed=self.random_state,
+            use_amp=True,  # Enable Automatic Mixed Precision for memory savings
+            report_to="none" # Disable integrations like W&B
+        )
+
+        # Create trainer
+        trainer = Trainer(
+            model=self.classifier,
+            args=args,
+            train_dataset=train_dataset,
             column_mapping={"text": "text", "label": "label"}
         )
         
-        # Train the SetFit model
+        # Train the model
         trainer.train()
-        
-        # Update the classifier reference
-        self.classifier = trainer.model
-        
-        logger.info("SetFit training completed")
     
     def _prepare_features(self, texts: List[str]) -> np.ndarray:
         """
@@ -329,6 +337,8 @@ class SubsetClassifier:
             # Standard sklearn classifiers
             self.classifier.fit(X_train, y_train)
         
+        self.is_trained = True
+        
         # Calculate training statistics
         if self.classifier_type == "setfit":
             # For SetFit, calculate accuracy manually
@@ -367,7 +377,6 @@ class SubsetClassifier:
             )
         
         self.training_stats = stats
-        self.is_trained = True
         
         logger.info(f"Training completed. Train accuracy: {train_score:.3f}")
         if 'validation_accuracy' in stats:

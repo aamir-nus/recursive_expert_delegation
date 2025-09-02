@@ -1,0 +1,39 @@
+{
+  "subset_0": [
+    "Good Quality Product",
+    "Make test shorter",
+    "Skin Type",
+    "Taste Is Unappealing",
+    "Multi Use",
+    "Improves Sleep for me and my family",
+    "Serum Types",
+    "Value/ Pricing"
+  ],
+  "subset_1": [
+    "Ingredients",
+    "Feel",
+    "Appearance on skin (looks/ finish)",
+    "Coverage",
+    "Will recommend",
+    "Has Perfect Balance Of Taste/Flavour",
+    "Effectiveness",
+    "Soft/ Smooth Skin"
+  ],
+  "subset_2": [
+    "Taste Is Appealing",
+    "Skin Condition",
+    "Product Performance",
+    "Shopping",
+    "Love The Product",
+    "Color",
+    "Smoothens skin",
+    "Recommendations"
+  ],
+  "subset_3": [
+    "Would Not Recommend Product",
+    "Healthy Skin",
+    "Fragrance",
+    "Brand/ Product",
+    "Would Recommend Product"
+  ]
+}

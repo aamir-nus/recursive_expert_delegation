@@ -64,7 +64,7 @@ subsetting:
 # Embedding Settings
 embeddings:
   # Auto-selected based on performance.mode, or override with specific model
-  model_name: "auto"  # Options: "auto", or specific model name
+  model_name: "all-mpnet-base-v2"  # Options: "auto", or specific model name
   
   # Model options for different performance modes
   speed_model: "all-MiniLM-L6-v2"
@@ -72,7 +72,7 @@ embeddings:
   accuracy_model: "Qwen/Qwen3-Embedding-0.6B"
   
   # Qwen-specific optimization settings
-  qwen_truncate_dim: 128  # Dimension reduction for Qwen models for efficiency
+  qwen_truncate_dim: 32  # Dimension reduction for Qwen models for efficiency
   
   # Whether to cache embeddings
   enable_cache: true
@@ -86,12 +86,15 @@ embeddings:
 # Classifier Settings
 classifier:
   # Auto-selected based on performance.mode, or override with specific type
-  type: "auto"  # Options: "auto", "logistic_regression", "random_forest", "setfit"
+  type: "setfit"  # Options: "auto", "logistic_regression", "random_forest", "setfit"
   
   # Classifier options for different performance modes
   speed_type: "logistic_regression"
   balanced_type: "random_forest"
   accuracy_type: "setfit"
+  
+  # Batch size for SetFit training to manage memory
+  setfit_batch_size: 4
   
   # Whether to use embeddings (true) or TF-IDF (false)
   use_embeddings: true
@@ -111,13 +114,13 @@ classifier:
 # LLM Validation Settings
 llm_validation:
   # Default LLM model for validation
-  model_name: "claude-3.5-sonnet"
+  model_name: "glm-4.5-air"
   
   # Sampling temperature
   temperature: 0.0
   
   # Maximum timeout per request (seconds)
-  max_timeout: 30
+  max_timeout: 150
   
   # Number of similar examples to include in validation prompts
   similar_examples_count: 6
@@ -157,7 +160,7 @@ active_learning:
   retrain_all: false
 
   # Stopping criteria for active learning
-  stop_mode: "informative_then_all_predicted"  # Options: "informative_only", "informative_then_all_predicted"
+  stop_mode: "informative_only"  # Options: "informative_only", "informative_then_all_predicted"
   #   - "informative_only": Stop when no more informative samples are found (current behavior)
   #   - "informative_then_all_predicted": After no more informative samples, continue for N iterations validating all predicted samples
   all_predicted_iterations: 3  # Only used if stop_mode is "informative_then_all_predicted"

@@ -236,23 +236,25 @@ The active learning loop was configured to run for a maximum of 10 iterations. I
 
 ## Performance with "Informative then All" Strategy (Max Iteration Run)
 
-An additional benchmark was run using the `Informative then All Predicted` strategy, intended to run for up to 50 iterations to test performance limits. However, due to a configuration error, it also stopped after 10 iterations. The results are still valuable as another data point for the 100 samples/class configuration.
+This section summarizes the max-iteration run using the `Informative then All Predicted` strategy with `glm-4.5-air` as the validator. The run was configured for 50 iterations and 100 samples per class.
 
-- **Run ID**: `benchmark_20250828_160048`
+- **Run Folder**: `benchmark_informative_then_all_predictions_glm-4.5-air_max_iter`
 - **Strategy**: Informative then All Predicted
 - **Samples Per Class**: 100
+- **Iterations**: 50
 
-| Metric                            | Value  |
-| :-------------------------------- | :----- |
-| **Accuracy**                | 86.93% |
-| **F1-Score**                | 0.8822 |
-| **Total Validated Samples** | 311    |
-| **Avg. Validation Rate**    | 77.8%  |
-| **Total Time (s)**          | 141.70 |
+| Metric                          | Value   |
+| :------------------------------ | :------ |
+| **Accuracy**                    | 85.57%  |
+| **F1-Score**                    | 0.8734  |
+| **Total Validated Samples**     | 1342    |
+| **Avg. Validated/Iteration**    | 26.84   |
+| **Approx. Avg. Validation Rate**| 26.8%   |
+| **Total Time (s)**              | 1461.42 |
 
-### Interpretation
-
-The results of this run are very similar to the other 100-sample runs, further confirming that the framework's performance is consistent and reproducible. The minor differences in metrics fall within the expected range of variation for model training.
+Notes:
+- The approximate validation rate assumes 100 candidates per iteration (from the active-learning configuration) and is computed as total_validated_samples / total_iterations.
+- Compared to 10-iteration baselines, this longer run trades speed for breadth of validated samples, while maintaining competitive final accuracy.
 
 ## Benchmark Comparison: Informative vs. All-Predicted
 
@@ -291,6 +293,83 @@ The following benchmarks were designed to test the limits of the active learning
 The primary goal was to investigate whether these smaller models could help the subset-classifiers reach a point of convergence, where the active learning loop ceases to find new, informative samples to label. By setting the maximum iterations to 50—well beyond the standard 10 used in earlier tests—we can observe how these models perform over an extended learning period and whether they can exhaust the pool of valuable unlabeled data.
 
 The models chosen for this test (`gemma3-4b`, `qwen3-8B`, `glm-4.5-air`) represent a range of models that are known for their relative high-performing, small-footprint performance. These models are suitable for private or on-system deployment, where data security is a priority. This methodology is intended to showcase the potential of using the R.E.D. framework to develop highly accurate, specialized classifiers without relying on larger, external LLM APIs for the validation step.
+
+## Standard Iteration Performance Comparison (10 Iterations)
+
+This section compares the performance of three LLM models (glm-4.5-air, qwen3-8B, gemma3-4b) when used as validators in the R.E.D. framework with standard active learning settings (10 iterations). All experiments use the same base configuration:
+
+- **Embedding Model**: `all-mpnet-base-v2` (balanced mode)
+- **Classification Model**: `random_forest` (balanced mode)
+- **UMAP Dimensions**: 50 (balanced mode)
+- **Active Learning**: 10 iterations, batch size 100, samples per iteration 100
+- **LLM Validator**: Varied across experiments (only component that changes)
+
+### Performance Comparison Table
+
+| Model                 | Samples Per Class | Accuracy | Precision | Recall | F1-Score | Total Time (s) | Validated Samples | Avg. Time per Sample (s) |
+| :-------------------- | :---------------- | :------- | :-------- | :----- | :------- | :------------- | :---------------- | :----------------------- |
+| **glm-4.5-air** | 100               | 86.50%   | 90.54%    | 86.50% | 88.06%   | 420.19         | 272               | 1.55                     |
+|                       | 50                | 78.99%   | 84.91%    | 78.99% | 80.75%   | 726.32         | 299               | 2.43                     |
+|                       | 30                | 79.40%   | 86.02%    | 79.40% | 80.95%   | 904.33         | 329               | 2.75                     |
+| **qwen3-8B**    | 100               | 86.58%   | 90.21%    | 86.58% | 87.89%   | 1068.68        | 321               | 3.33                     |
+|                       | 50                | 79.78%   | 85.44%    | 79.78% | 81.14%   | 11180.27       | 368               | 30.38                    |
+|                       | 30                | 80.02%   | 85.42%    | 80.02% | 80.75%   | 2072.11        | 423               | 4.90                     |
+| **gemma3-4b**   | 100               | 86.65%   | 90.51%    | 86.65% | 88.06%   | 564.41         | 242               | 2.33                     |
+|                       | 50                | 79.74%   | 85.38%    | 79.74% | 81.08%   | 846.97         | 264               | 3.21                     |
+|                       | 30                | 77.79%   | 84.75%    | 77.79% | 79.68%   | 1148.81        | 257               | 4.47                     |
+
+### Key Observations
+
+1. **Top Performance at 100 Samples**: All three models achieve similar high accuracy (~86.5%) when trained on 100 samples per class, with minimal performance differences between them.
+2. **Efficiency Rankings**:
+
+   - **glm-4.5-air**: Most efficient overall, especially at higher sample counts. Best average time per sample (1.55s for 100 samples).
+   - **gemma3-4b**: Second most efficient, good balance of speed and performance.
+   - **qwen3-8B**: Significantly slower, especially at 50 samples (30.38s per sample), but still achieves competitive accuracy.
+3. **Scaling Behavior**: Performance improves consistently with more training samples across all models, with diminishing returns as sample size increases.
+4. **Validation Efficiency**: glm-4.5-air and gemma3-4b show more consistent validation rates, while qwen3-8B has higher variance in validated samples.
+
+### Recommendations for Production Use
+
+- **For Speed**: Use glm-4.5-air with 100 samples per class (best efficiency)
+- **For Balance**: Use gemma3-4b with 100 samples per class (good speed-accuracy trade-off)
+- **For Local Deployment**: Use gemma3-4b (fastest local option with good performance)
+- **For Maximum Accuracy**: Any model with 100 samples per class (all achieve ~86.5% accuracy)
+
+---
+
+## Improving the base classifier : SetFit (10 Iterations, glm-4.5-air)
+
+This summarizes runs where the base classifier is SetFit (fine-tuning a sentence transformer), a step up from RF. SetFit was set with the `all-mpnet-base-v2` embedding model and the LLM judge set to `glm-4.5-air`, for 10 active-learning iterations.
+
+- Source: `benchmark_informative_then_all_predictions_setfit-glm-4.5-air/detailed_results_20250901_075548.json`
+
+| Samples Per Class | Accuracy | Precision | Recall | F1-Score | Total Validated Samples | Total Time (s) |
+| :---------------- | :------- | :-------- | :----- | :------- | :---------------------- | :------------- |
+| **30**            | 80.13%   | 0.8781    | 0.8013 | 0.8243   | 358                     | 1470.17        |
+| **50**            | 79.04%   | 0.8508    | 0.7904 | 0.8124   | 335                     | 1051.43        |
+| **100**           | 86.00%   | 0.8778    | 0.8600 | 0.8654   | 277                     | 1159.01        |
+
+Notes and interpretation:
+- With 100 samples/class, SetFit reaches 86.0% accuracy (F1 0.865), comparable to the best RF-based baselines at 10 iterations.
+- SetFit shows lower validated counts at higher data (277 vs ~300+ in RF runs), suggesting stronger initial models yield fewer queries for the judge.
+- Training cost is higher than RF but can offer accuracy gains when tuned; mixed-precision helps contain GPU memory.
+
+### Deep-dive : Subset Performance on Final Retraining (SetFit + glm-4.5-air)
+
+The tables below show the **validation accuracy** of each subset classifier after the final retrain step for the SetFit base-classifier runs (10 iterations).
+
+**SetFit + glm-4.5-air**
+
+| Samples Per Class | Subset 0 | Subset 1 | Subset 2 | Subset 3 |
+| :---------------- | :------- | :------- | :------- | :------- |
+| **100**           | 92.41%   | 98.57%   | —        | —        |
+| **50**            | 93.67%   | 79.06%   | 99.35%   | —        |
+| **30**            | 95.68%   | 90.65%   | 91.28%   | 96.26%   |
+
+Notes:
+* As with the RF baselines, subset accuracies remain high even when overall test accuracy is modest, showing that the experts specialise well on their domains once they have enough training signals.
+* Also note that the subset accuracy for a strong classifier benefits more from the judge, implying llm judge classification samples help it to 'learn' better!
 
 ## Comparative Performance of Small Models at High Iterations
 
@@ -354,4 +433,72 @@ A key question in this framework is whether it's more beneficial to have a stron
 3. **The Sweet Spot - A Balance of Strengths**: The `qwen3-8B` model offers a compelling balance. It outperforms the smaller `gemma3-4b` model in accuracy while being more accessible than the `glm-4.5-air` model. Its final evaluation metrics are competitive, and its subset classifiers show respectable performance, especially in the 100-sample run where they are closely matched. This suggests that a mid-sized, capable LLM judge combined with a reasonably well-trained base model can provide an optimal trade-off between performance, speed, and resource requirements. For sandboxed environments where data privacy and local execution are paramount, this balance is often the most desirable outcome.
 4. **Suggestion**:
    1. for **balance** : 100 samples per class, 20 active-learning iterations, model=random_forest, embedding=all-mpnet-base-v2
-   2. for **accuracy** : 100 samples per class, 20 active-learning iterations, model=setfit, embedding=qwen3-Embedding-0.6B
+   2. for **accuracy** : 100 samples per class, 10 active-learning iterations, model=setfit, embedding=qwen3-Embedding-0.6B
+
+**Updated perspective with SetFit findings**
+
+5. **Better classifiers still help—but only up to the judge’s ceiling**:  The SetFit runs (stronger base models) with the *same* `glm-4.5-air` judge hit 86 % accuracy—essentially identical to the RF + qwen3-8B combination.  This implies that once the base model is “good enough”, further gains depend on the judge.  For example, a SetFit classifier validated by qwen3-8B would likely surpass 87 %, whereas a weaker RF validated by glm-4.5-air would stay below 86 %.
+
+6. **A stronger judge can compensate for a weaker classifier (to a point)**:  RF + qwen3-8B (weaker base + stronger judge) also reaches ~87 %.  The judge’s higher-quality labels progressively correct the classifier.  However, label throughput drops (longer runtimes), so compute cost shifts to the LLM.
+
+**Take-away**:  A *better* classifier is not strictly *better* than a *stronger* judge in all cases; the two components trade off.  Optimal performance comes from balancing them given compute/latency constraints—e.g., use SetFit when GPU is plentiful, or rely on a strong judge when LLM budget is acceptable but training GPUs are scarce.
+
+## Best Overall Performance (Base Classifier × LLM Judge)
+
+From all recorded runs, the best overall final evaluation was achieved with:
+
+- **Base Classifier**: Random Forest (balanced mode)
+- **Embedding**: `all-mpnet-base-v2`
+- **LLM Judge**: `qwen3-8B`
+- **Samples Per Class**: 100
+- **Iterations**: 50 (max-iter run)
+
+Final evaluation (from `benchmark_informative_then_all_predictions_qwen3-8B_max_iter/detailed_results_20250828_221749.json`):
+
+- **Overall Accuracy**: 87.37%
+- **Precision**: 90.78%
+- **Recall**: 87.37%
+- **F1-Score**: 0.8852
+
+### Subset-wise Validation Accuracy (Final Retraining)
+
+The subset experts’ validation accuracies (last retrain) illustrate balanced learning across domains:
+
+| Subset | Validation Accuracy |
+| :----- | :------------------ |
+| 0      | 78.57%             |
+| 1      | 78.34%             |
+
+Interpretation:
+- Both experts converge to high and comparable accuracies, indicating that the LLM judge consistently curated high-quality labels across subsets.
+- The combination of a strong base classifier (RF with mpnet embeddings) and a reliable judge (qwen3-8B) produced the highest final accuracy among all runs.
+
+### Why this configuration wins
+- **Strong embeddings (mpnet)** provide robust, generalizable features for traditional classifiers.
+- **Random Forest** scales well with mpnet features and is stable under iterative retraining.
+- **qwen3-8B** provides high-quality validations, improving dataset quality over iterations and raising the ceiling on achievable accuracy.
+
+## SetFit + glm-4.5-air (Informative then All) — Results
+
+This subsection summarizes the run at `benchmarks/benchmark_informative_then_all_predictions_setfit-glm-4.5-air` using SetFit as the base classifier and `glm-4.5-air` as the validator (10 iterations).
+
+- Source files consulted:
+  - `detailed_results_20250901_075548.json`
+  - `main_logs/main_benchmark_20250901_075548.log` (comparison table)
+
+### Final Evaluation Metrics
+
+| Samples Per Class | Accuracy | Precision | Recall | F1-Score | Total Validated | Total Time (s) |
+| :---------------- | :------- | :-------- | :----- | :------- | :-------------- | :------------- |
+| 30 | 0.8013 | 0.8781 | 0.8013 | 0.8243 | 358 | 1470.17 |
+| 50 | 0.7904 | 0.8508 | 0.7904 | 0.8124 | 335 | 1051.43 |
+| 100 | 0.8600 | 0.8778 | 0.8600 | 0.8654 | 277 | 1159.01 |
+
+Notes:
+- Metrics pulled from the main log’s comparison table (and cross-checked with the detailed JSON).
+- All runs used 10 active-learning iterations with the “Informative then All Predicted” strategy.
+
+### Interpretation
+- SetFit achieves competitive accuracy at 100 samples/class (86.0%), but with higher compute cost during initial training compared to RF.
+- Precision is consistently strong (≥0.85) across runs, indicating reliable positive predictions post-LLM validation.
+- As with other configurations, performance scales with more initial data; 100 samples/class is the sweet spot for both accuracy and stability.

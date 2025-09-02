@@ -39,7 +39,8 @@ class PromptFormatter:
         if few_shot_examples is None:
             few_shot_examples = []
         
-        if model_family == ModelFamily.OPENROUTER or model_family == ModelFamily.OLLAMA:
+        if model_family in [ModelFamily.OPENROUTER,
+                            ModelFamily.OLLAMA]:
             return PromptFormatter._format_openai_style(
                 system_prompt, user_prompt, few_shot_examples
             )

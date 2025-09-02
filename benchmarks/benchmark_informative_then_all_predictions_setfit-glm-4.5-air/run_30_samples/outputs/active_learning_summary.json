@@ -1,0 +1,543 @@
+{
+  "status": "success",
+  "total_time": 1334.0514965057373,
+  "total_iterations": 10,
+  "convergence_achieved": false,
+  "total_validated_samples": 358,
+  "iteration_results": [
+    {
+      "iteration": 1,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 34,
+      "retrained_classifiers": 0,
+      "iteration_time": 126.7990140914917,
+      "cumulative_validated": 34
+    },
+    {
+      "iteration": 2,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 37,
+      "retrained_classifiers": 0,
+      "iteration_time": 75.11111617088318,
+      "cumulative_validated": 71
+    },
+    {
+      "iteration": 3,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 32,
+      "retrained_classifiers": 0,
+      "iteration_time": 78.62090229988098,
+      "cumulative_validated": 103
+    },
+    {
+      "iteration": 4,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 38,
+      "retrained_classifiers": 0,
+      "iteration_time": 107.16465663909912,
+      "cumulative_validated": 141
+    },
+    {
+      "iteration": 5,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 43,
+      "retrained_classifiers": 0,
+      "iteration_time": 68.79317355155945,
+      "cumulative_validated": 184
+    },
+    {
+      "iteration": 6,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 29,
+      "retrained_classifiers": 0,
+      "iteration_time": 80.19507789611816,
+      "cumulative_validated": 213
+    },
+    {
+      "iteration": 7,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 40,
+      "retrained_classifiers": 0,
+      "iteration_time": 99.97640299797058,
+      "cumulative_validated": 253
+    },
+    {
+      "iteration": 8,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 34,
+      "retrained_classifiers": 0,
+      "iteration_time": 105.5905830860138,
+      "cumulative_validated": 287
+    },
+    {
+      "iteration": 9,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 38,
+      "retrained_classifiers": 0,
+      "iteration_time": 92.15696859359741,
+      "cumulative_validated": 325
+    },
+    {
+      "iteration": 10,
+      "batch_size": 20,
+      "predictions_made": 80,
+      "informative_samples": 80,
+      "validated_samples": 33,
+      "retrained_classifiers": 0,
+      "iteration_time": 90.59902548789978,
+      "cumulative_validated": 358
+    }
+  ],
+  "final_retrain_stats": {
+    "total_classifiers": 4,
+    "successfully_retrained": 4,
+    "failed_retrains": 0,
+    "individual_stats": {
+      "subset_0": {
+        "subset_id": "subset_0",
+        "subset_labels": [
+          "Good Quality Product",
+          "Make test shorter",
+          "Skin Type",
+          "Taste Is Unappealing",
+          "Multi Use",
+          "Improves Sleep for me and my family",
+          "Serum Types",
+          "Value/ Pricing"
+        ],
+        "train_samples": 999,
+        "train_accuracy": 0.9382183908045977,
+        "noise_samples": 139,
+        "label_distribution": {
+          "Good Quality Product": 68,
+          "Make test shorter": 60,
+          "Skin Type": 89,
+          "Taste Is Unappealing": 72,
+          "Multi Use": 62,
+          "Improves Sleep for me and my family": 70,
+          "Serum Types": 73,
+          "Value/ Pricing": 63,
+          "__NOISE__": 139
+        },
+        "validation_accuracy": 0.9568345323741008,
+        "classification_report": {
+          "Good Quality Product": {
+            "precision": 1.0,
+            "recall": 0.8666666666666667,
+            "f1-score": 0.9285714285714286,
+            "support": 30.0
+          },
+          "Improves Sleep for me and my family": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "Make test shorter": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "Multi Use": {
+            "precision": 1.0,
+            "recall": 0.9333333333333333,
+            "f1-score": 0.9655172413793104,
+            "support": 30.0
+          },
+          "Serum Types": {
+            "precision": 0.95,
+            "recall": 1.0,
+            "f1-score": 0.9743589743589743,
+            "support": 19.0
+          },
+          "__NOISE__": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.9568345323741008,
+          "macro avg": {
+            "precision": 0.8250000000000001,
+            "recall": 0.7999999999999999,
+            "f1-score": 0.8114079407182856,
+            "support": 139.0
+          },
+          "weighted avg": {
+            "precision": 0.9931654676258994,
+            "recall": 0.9568345323741008,
+            "f1-score": 0.9736365511607388,
+            "support": 139.0
+          }
+        }
+      },
+      "subset_1": {
+        "subset_id": "subset_1",
+        "subset_labels": [
+          "Ingredients",
+          "Feel",
+          "Appearance on skin (looks/ finish)",
+          "Coverage",
+          "Will recommend",
+          "Has Perfect Balance Of Taste/Flavour",
+          "Effectiveness",
+          "Soft/ Smooth Skin"
+        ],
+        "train_samples": 999,
+        "train_accuracy": 0.8635057471264368,
+        "noise_samples": 139,
+        "label_distribution": {
+          "Ingredients": 64,
+          "Feel": 76,
+          "Appearance on skin (looks/ finish)": 69,
+          "Coverage": 72,
+          "Will recommend": 66,
+          "Has Perfect Balance Of Taste/Flavour": 63,
+          "Effectiveness": 79,
+          "Soft/ Smooth Skin": 68,
+          "__NOISE__": 139
+        },
+        "validation_accuracy": 0.9064748201438849,
+        "classification_report": {
+          "Appearance on skin (looks/ finish)": {
+            "precision": 1.0,
+            "recall": 0.9333333333333333,
+            "f1-score": 0.9655172413793104,
+            "support": 30.0
+          },
+          "Coverage": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "Effectiveness": {
+            "precision": 1.0,
+            "recall": 0.7333333333333333,
+            "f1-score": 0.8461538461538461,
+            "support": 30.0
+          },
+          "Feel": {
+            "precision": 1.0,
+            "recall": 0.9,
+            "f1-score": 0.9473684210526315,
+            "support": 30.0
+          },
+          "Has Perfect Balance Of Taste/Flavour": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 19.0
+          },
+          "Ingredients": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "Soft/ Smooth Skin": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "__NOISE__": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.9064748201438849,
+          "macro avg": {
+            "precision": 0.625,
+            "recall": 0.5708333333333333,
+            "f1-score": 0.5948799385732235,
+            "support": 139.0
+          },
+          "weighted avg": {
+            "precision": 1.0,
+            "recall": 0.9064748201438849,
+            "f1-score": 0.9479941385436953,
+            "support": 139.0
+          }
+        }
+      },
+      "subset_2": {
+        "subset_id": "subset_2",
+        "subset_labels": [
+          "Taste Is Appealing",
+          "Skin Condition",
+          "Product Performance",
+          "Shopping",
+          "Love The Product",
+          "Color",
+          "Smoothens skin",
+          "Recommendations"
+        ],
+        "train_samples": 1071,
+        "train_accuracy": 0.8836898395721925,
+        "noise_samples": 149,
+        "label_distribution": {
+          "Taste Is Appealing": 64,
+          "Skin Condition": 98,
+          "Product Performance": 90,
+          "Shopping": 77,
+          "Love The Product": 70,
+          "Color": 71,
+          "Smoothens skin": 62,
+          "Recommendations": 67,
+          "__NOISE__": 149
+        },
+        "validation_accuracy": 0.912751677852349,
+        "classification_report": {
+          "Color": {
+            "precision": 1.0,
+            "recall": 0.9666666666666667,
+            "f1-score": 0.9830508474576272,
+            "support": 30.0
+          },
+          "Love The Product": {
+            "precision": 1.0,
+            "recall": 0.8666666666666667,
+            "f1-score": 0.9285714285714286,
+            "support": 30.0
+          },
+          "Product Performance": {
+            "precision": 0.96,
+            "recall": 0.8,
+            "f1-score": 0.8727272727272727,
+            "support": 30.0
+          },
+          "Recommendations": {
+            "precision": 1.0,
+            "recall": 0.9333333333333333,
+            "f1-score": 0.9655172413793104,
+            "support": 30.0
+          },
+          "Shopping": {
+            "precision": 0.9666666666666667,
+            "recall": 1.0,
+            "f1-score": 0.9830508474576272,
+            "support": 29.0
+          },
+          "Skin Condition": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "Smoothens skin": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "Taste Is Appealing": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "__NOISE__": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.912751677852349,
+          "macro avg": {
+            "precision": 0.5474074074074075,
+            "recall": 0.5074074074074074,
+            "f1-score": 0.5258797375103629,
+            "support": 149.0
+          },
+          "weighted avg": {
+            "precision": 0.9854586129753916,
+            "recall": 0.912751677852349,
+            "f1-score": 0.9463387804049688,
+            "support": 149.0
+          }
+        }
+      },
+      "subset_3": {
+        "subset_id": "subset_3",
+        "subset_labels": [
+          "Would Not Recommend Product",
+          "Healthy Skin",
+          "Fragrance",
+          "Brand/ Product",
+          "Would Recommend Product"
+        ],
+        "train_samples": 738,
+        "train_accuracy": 0.935064935064935,
+        "noise_samples": 154,
+        "label_distribution": {
+          "Would Not Recommend Product": 69,
+          "Healthy Skin": 71,
+          "Fragrance": 78,
+          "Brand/ Product": 99,
+          "Would Recommend Product": 68,
+          "__NOISE__": 154
+        },
+        "validation_accuracy": 0.9626168224299065,
+        "classification_report": {
+          "Brand/ Product": {
+            "precision": 0.967741935483871,
+            "recall": 1.0,
+            "f1-score": 0.9836065573770492,
+            "support": 30.0
+          },
+          "Fragrance": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1-score": 1.0,
+            "support": 30.0
+          },
+          "Healthy Skin": {
+            "precision": 1.0,
+            "recall": 0.9666666666666667,
+            "f1-score": 0.9830508474576272,
+            "support": 30.0
+          },
+          "Would Not Recommend Product": {
+            "precision": 1.0,
+            "recall": 0.8235294117647058,
+            "f1-score": 0.9032258064516129,
+            "support": 17.0
+          },
+          "Would Recommend Product": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1-score": 0.0,
+            "support": 0.0
+          },
+          "accuracy": 0.9626168224299065,
+          "macro avg": {
+            "precision": 0.7935483870967742,
+            "recall": 0.7580392156862745,
+            "f1-score": 0.7739766422572579,
+            "support": 107.0
+          },
+          "weighted avg": {
+            "precision": 0.9909556828459452,
+            "recall": 0.9626168224299065,
+            "f1-score": 0.975276269670259,
+            "support": 107.0
+          }
+        }
+      }
+    }
+  },
+  "save_stats": {
+    "saved_components": [
+      "classifier_subset_0",
+      "classifier_subset_1",
+      "classifier_subset_2",
+      "classifier_subset_3",
+      "data_manager",
+      "validator_cache",
+      "training_data"
+    ],
+    "failed_saves": [],
+    "output_paths": {
+      "classifier_subset_0": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/classifiers/subset_0",
+      "classifier_subset_1": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/classifiers/subset_1",
+      "classifier_subset_2": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/classifiers/subset_2",
+      "classifier_subset_3": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/classifiers/subset_3",
+      "data_manager": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/data_manager.pkl",
+      "validator_cache": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/validator_cache.pkl",
+      "training_data": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs/final_state/final_training_data.csv"
+    }
+  },
+  "validation_history": [
+    {
+      "iteration": 1,
+      "total_validated": 80,
+      "valid_samples": 34,
+      "validation_rate": 0.425
+    },
+    {
+      "iteration": 2,
+      "total_validated": 80,
+      "valid_samples": 37,
+      "validation_rate": 0.4625
+    },
+    {
+      "iteration": 3,
+      "total_validated": 80,
+      "valid_samples": 32,
+      "validation_rate": 0.4
+    },
+    {
+      "iteration": 4,
+      "total_validated": 80,
+      "valid_samples": 38,
+      "validation_rate": 0.475
+    },
+    {
+      "iteration": 5,
+      "total_validated": 80,
+      "valid_samples": 43,
+      "validation_rate": 0.5375
+    },
+    {
+      "iteration": 6,
+      "total_validated": 80,
+      "valid_samples": 29,
+      "validation_rate": 0.3625
+    },
+    {
+      "iteration": 7,
+      "total_validated": 80,
+      "valid_samples": 40,
+      "validation_rate": 0.5
+    },
+    {
+      "iteration": 8,
+      "total_validated": 80,
+      "valid_samples": 34,
+      "validation_rate": 0.425
+    },
+    {
+      "iteration": 9,
+      "total_validated": 80,
+      "valid_samples": 38,
+      "validation_rate": 0.475
+    },
+    {
+      "iteration": 10,
+      "total_validated": 80,
+      "valid_samples": 33,
+      "validation_rate": 0.4125
+    }
+  ],
+  "retrain_history": [],
+  "performance_stats": {
+    "total_processing_time": 925.0069208145142,
+    "average_iteration_time": 92.50069208145142,
+    "min_iteration_time": 68.79317355155945,
+    "max_iteration_time": 126.7990140914917,
+    "total_iterations": 10,
+    "validation_efficiency": 0.3870241313273239
+  },
+  "output_dir": "/home/aamir_syed/recursive_expert_delegation/benchmarks/benchmark_20250901_075548/run_30_samples/outputs"
+}
