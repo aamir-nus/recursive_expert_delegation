@@ -9,6 +9,7 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from torch import cuda
 
 from ..config.config_loader import get_config
 
@@ -48,25 +49,57 @@ class EmbeddingProvider:
         )
         self.enable_cache = enable_cache if enable_cache is not None else embeddings_config.get('enable_cache', True)
         
-        # Initialize the embedding model with optimizations for Qwen
+        truncate_dim = None
         if "Qwen" in self.model_name:
-            # Optimize Qwen models with flash attention and left padding
+            truncate_dim = embeddings_config.get('qwen_truncate_dim', 128)
+
+        # Clear GPU memory before loading large models
+        if device == "auto" or (device and "cuda" in device):
             try:
+                # Use device_map in model_kwargs for proper multi-GPU loading
+                model_kwargs = {
+                    "device_map": "auto",
+                    "torch_dtype": "auto",
+                    "low_cpu_mem_usage": True,
+                }
+
+                # Don't pass device parameter when using device_map
                 self.model = SentenceTransformer(
                     self.model_name,
-                    model_kwargs={"attn_implementation": "flash_attention_2", "device_map": "auto"},
+                    model_kwargs=model_kwargs,
                     tokenizer_kwargs={"padding_side": "left"},
-                    device=device
+                    truncate_dim=truncate_dim
                 )
-                logger.info(f"Loaded Qwen model {self.model_name} with flash attention optimizations")
+                logger.info(f"Loaded Qwen model {self.model_name} with multi-GPU device mapping")
             except Exception as e:
-                logger.warning(f"Failed to load Qwen model with optimizations, falling back to standard loading: {e}")
-                self.model = SentenceTransformer(self.model_name, device=device)
+                logger.warning(f"Failed to load Qwen model with device mapping: {e}")
+                # Fallback to CPU if GPU fails
+                try:
+                    self.model = SentenceTransformer(self.model_name, device="cpu", truncate_dim=truncate_dim)
+                    logger.info(f"Loaded Qwen model {self.model_name} on CPU as fallback")
+                except Exception as e2:
+                    logger.error(f"Failed to load Qwen model even on CPU: {e2}")
+                    raise e2
         else:
-            self.model = SentenceTransformer(self.model_name, device=device)
+            # For smaller models, use single GPU or CPU
+            try:
+                # Determine the actual device to use
+                if device == "auto":
+                    actual_device = "cuda" if cuda.is_available() else "cpu"
+                else:
+                    actual_device = device
+
+                self.model = SentenceTransformer(self.model_name, device=actual_device)
+                logger.info(f"Loaded model {self.model_name} on {actual_device}")
+            except Exception as e:
+                logger.warning(f"Failed to load model on {device}, trying CPU: {e}")
+                self.model = SentenceTransformer(self.model_name, device="cpu")
+                logger.info(f"Loaded model {self.model_name} on CPU as fallback")
         
+        # Set the embedding dimension from the loaded model itself
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
-        
+        logger.info(f"Embedding provider initialized with model '{self.model_name}' and dimension {self.embedding_dim}")
+
         # Cache for embeddings
         self.embedding_cache = {}
         # Fix anti-pattern: use self.cache_dir and self.model_name instead of parameters
@@ -127,11 +160,8 @@ class EmbeddingProvider:
         
         # Generate embedding with Qwen-specific optimizations
         if "Qwen" in self.model_name:
-            # Use document prompt for Qwen models and enable truncation
-            config = get_config()
-            embeddings_config = config.get('embeddings', {})
-            truncate_dim = embeddings_config.get('qwen_truncate_dim', 128)
-            embedding = self.model.encode([text], prompt_name="document", truncate_dim=truncate_dim)[0]
+            # Use document prompt for Qwen models
+            embedding = self.model.encode([text], prompt_name="document")[0]
         else:
             embedding = self.model.encode([text])[0]
         
@@ -174,11 +204,8 @@ class EmbeddingProvider:
             logger.info(f"Generating embeddings for {len(texts_to_encode)} new texts...")
             # Generate embeddings with Qwen-specific optimizations
             if "Qwen" in self.model_name:
-                # Use document prompt for Qwen models and enable truncation
-                config = get_config()
-                embeddings_config = config.get('embeddings', {})
-                truncate_dim = embeddings_config.get('qwen_truncate_dim', 128)
-                encoded = self.model.encode(texts_to_encode, prompt_name="document", truncate_dim=truncate_dim, show_progress_bar=show_progress)
+                # Use document prompt for Qwen models
+                encoded = self.model.encode(texts_to_encode, prompt_name="document", show_progress_bar=show_progress)
             else:
                 encoded = self.model.encode(texts_to_encode, show_progress_bar=show_progress)
             
