@@ -42,10 +42,36 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import torch
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
 
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+# Configure multi-GPU setup
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+# Set PyTorch CUDA memory management for better multi-GPU usage
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,max_split_size_mb:512"
+
+# Configure PyTorch for multi-GPU
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = False
+    # Enable memory efficient attention if available
+    if hasattr(torch.backends.cuda, 'enable_mem_efficient_sdp'):
+        torch.backends.cuda.enable_mem_efficient_sdp(True)
+
+    # Log GPU information
+    num_gpus = torch.cuda.device_count()
+    print(f"PyTorch CUDA available: {torch.cuda.is_available()}")
+    print(f"Number of GPUs available: {num_gpus}")
+    for i in range(num_gpus):
+        gpu_name = torch.cuda.get_device_name(i)
+        gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1024**3  # GB
+        print(f"GPU {i}: {gpu_name} ({gpu_memory:.1f} GB)")
+else:
+    print("CUDA not available, using CPU")
 
 from red.core.classifier import SubsetClassifier
 from red.pipelines.initial_training import InitialTrainingPipeline
@@ -54,6 +80,31 @@ from red.pipelines.active_learning import ActiveLearningLoop
 def sanitize_subset_id(subset_id):
     """Sanitize subset_id for safe file paths."""
     return str(subset_id).replace(' ', '_').replace('/', '_')
+
+def log_gpu_memory_usage(logger=None):
+    """Log current GPU memory usage for all GPUs."""
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        memory_info = []
+
+        for i in range(num_gpus):
+            allocated = torch.cuda.memory_allocated(i) / 1024**3  # GB
+            reserved = torch.cuda.memory_reserved(i) / 1024**3    # GB
+            total = torch.cuda.get_device_properties(i).total_memory / 1024**3  # GB
+            free = total - allocated
+
+            memory_info.append(f"GPU {i}: {allocated:.2f}GB used, {free:.2f}GB free, {reserved:.2f}GB reserved")
+
+        memory_msg = "GPU Memory Usage:\n" + "\n".join(memory_info)
+
+        if logger:
+            logger.info(memory_msg)
+        print(memory_msg)
+    else:
+        msg = "GPU memory monitoring not available - CUDA not detected"
+        if logger:
+            logger.info(msg)
+        print(msg)
 
 def setup_logging(log_dir: Path, run_name: str):
     """Setup logging for a specific run."""
@@ -340,6 +391,9 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
     logger.info("=" * 60)
 
     try:
+        # Log initial GPU memory usage
+        log_gpu_memory_usage(logger)
+
         # Step 1: Prepare training data
         logger.info("1. PREPARING TRAINING DATA")
         logger.info("-" * 30)
@@ -378,6 +432,9 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
         logger.info(f"  - Created {initial_results['subset_stats']['num_subsets']} subsets")
         logger.info(f"  - Trained {initial_results['classifier_stats']['trained_classifiers']} classifiers")
         logger.info(f"  - Time: {initial_results['total_time']:.2f} seconds")
+
+        # Log GPU memory after initial training
+        log_gpu_memory_usage(logger)
         
         # Step 3: Active Learning
         logger.info("3. ACTIVE LEARNING")
@@ -406,6 +463,9 @@ def run_single_experiment(samples_per_class, run_id, base_dir, dataframe, test_d
         logger.info(f"  - Validated samples: {al_results['total_validated_samples']}")
         logger.info(f"  - Convergence: {'Yes' if al_results['convergence_achieved'] else 'No'}")
         logger.info(f"  - Time: {al_results['total_time']:.2f} seconds")
+
+        # Log GPU memory after active learning
+        log_gpu_memory_usage(logger)
         
         # Step 4: Evaluation on test data
         logger.info("4. EVALUATION ON TEST DATA")
@@ -551,9 +611,9 @@ def main():
         print(class_stats)
 
         # Define experiment configurations
-        # samples_per_class_configs = [30, 50, 100]
+        samples_per_class_configs = [30, 50, 100]
         # samples_per_class_configs = [100]
-        samples_per_class_configs = [100, 50, 30]
+        # samples_per_class_configs = [100, 50, 30]
         config_msg = f"\nRunning {len(samples_per_class_configs)} experiments with samples per class: {samples_per_class_configs}"
         main_logger.info(config_msg)
         print(config_msg)
